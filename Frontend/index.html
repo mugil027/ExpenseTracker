@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expense Tracker</title>
+  <!-- Load Tailwind CSS from CDN for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load React and ReactDOM from CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Load Chart.js for all charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Load Lottie-web for animations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.0/lottie.min.js"></script>
+  <!-- Load Babel to transform JSX syntax on the fly -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f4f6; /* Light gray background */
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+  <div id="root"></div>
+
+  <!-- The main application code using JSX -->
+  <script type="text/babel">
+    window.onload = function() {
+      const { useState, useEffect, useRef } = React;
+      const API_URL = "http://127.0.0.1:5000";
+
+      // --- Icon components using inline SVG to avoid dependencies ---
+      const LogOutIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+        </svg>
+      );
+
+      const PlusIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus">
+          <path d="M5 12h14"/><path d="M12 5v14"/>
+        </svg>
+      );
+
+      const ChartIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bar-chart-2">
+          <line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/>
+        </svg>
+      );
+      
+      const TrendUpIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trending-up text-indigo-600">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+        </svg>
+      );
+
+      const EditIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      );
+
+      const TrashIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2">
+          <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
+        </svg>
+      );
+      
+      const TargetIcon = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-target">
+              <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+          </svg>
+      );
+      
+      const CloseIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      );
+
+      const Avatar = () => {
+        const container = useRef(null);
+        useEffect(() => {
+          if (container.current) {
+            const animation = lottie.loadAnimation({
+              container: container.current,
+              renderer: 'svg',
+              loop: true,
+              autoplay: true,
+              path: 'https://lottie.host/17094b9f-d596-410c-99c9-60916e788c2f/xXhK2f481Y.json'
+            });
+            return () => animation.destroy();
+          }
+        }, []);
+        return <div ref={container} className="w-48 h-48 md:w-64 md:h-64"></div>;
+      };
+
+      // --- Layout & Nav Components ---
+      const Sidebar = ({ onLogout, onViewChange, currentView, onOpenGoals }) => (
+        <nav className="flex flex-col items-center p-4 bg-gray-800 text-white shadow-lg w-20 md:w-56 h-screen">
+          <div className="flex flex-col items-center gap-4 w-full">
+            <h1 className="text-xl font-bold mb-4 md:block hidden">Tracker</h1>
+            <button
+              onClick={() => onViewChange('Dashboard')}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors duration-200 w-full ${
+                currentView === 'Dashboard' ? 'bg-indigo-600' : 'hover:bg-gray-700'
+              }`}
+            >
+              <ChartIcon />
+              <span className="text-xs md:block hidden">Dashboard</span>
+            </button>
+            <button
+              onClick={() => onViewChange('AddExpense')}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors duration-200 w-full ${
+                currentView === 'AddExpense' ? 'bg-indigo-600' : 'hover:bg-gray-700'
+              }`}
+            >
+              <PlusIcon />
+              <span className="text-xs md:block hidden">Add Expense</span>
+            </button>
+            <button
+              onClick={onOpenGoals}
+              className="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors duration-200 w-full hover:bg-gray-700"
+            >
+                <TargetIcon />
+                <span className="text-xs md:block hidden">Set Goals</span>
+            </button>
+          </div>
+          <button onClick={onLogout} className="mt-auto p-2 rounded-full hover:bg-red-500 transition-colors duration-200">
+            <LogOutIcon />
+          </button>
+        </nav>
+      );
+      
+      const SetGoalsModal = ({ goals, onUpdateGoals, onClose }) => {
+        const [tempGoals, setTempGoals] = useState(goals);
+        const categories = ['Food', 'Travel', 'Shopping', 'Bills', 'Rent', 'Entertainment', 'Health', 'Groceries', 'Education', 'Other'];
+
+        const handleChange = (e) => {
+            const { name, value } = e.target;
+            setTempGoals(prev => ({ ...prev, [name]: parseFloat(value) || 0 }));
+        };
+
+        const handleSubmit = () => {
+            onUpdateGoals(tempGoals);
+            onClose();
+        };
+
+        return (
+            <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
+                    <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
+                        <CloseIcon />
+                    </button>
+                    <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Set Monthly Goals</h2>
+                    <div className="space-y-4">
+                        {categories.map(cat => (
+                            <div className="flex items-center space-x-4" key={cat}>
+                                <label className="flex-1 text-gray-700 font-medium">{cat}</label>
+                                <input
+                                    type="number"
+                                    name={cat}
+                                    value={tempGoals[cat] || ''}
+                                    onChange={handleChange}
+                                    className="w-28 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                    <button
+                        onClick={handleSubmit}
+                        className="w-full mt-8 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors duration-200 shadow-lg"
+                    >
+                        Save Goals
+                    </button>
+                </div>
+            </div>
+        );
+      };
+
+      // --- Login/Signup View ---
+      const Login = ({ onLogin }) => {
+        const [isSignUp, setIsSignUp] = useState(false);
+        const [email, setEmail] = useState('');
+        const [password, setPassword] = useState('');
+        const [error, setError] = useState('');
+
+        const handleSubmit = async (e) => {
+          e.preventDefault();
+          setError('');
+          const endpoint = isSignUp ? `${API_URL}/auth/signup` : `${API_URL}/auth/login`;
+
+          try {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username: email, password: password }),
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+              if (!isSignUp) {
+                onLogin(data.token);
+              } else {
+                // After successful signup, switch to login view
+                alert('Signup successful! Please log in.');
+                setIsSignUp(false);
+              }
+            } else {
+              setError(data.msg || 'An error occurred.');
+            }
+          } catch (err) {
+            setError('Failed to connect to the server.');
+          }
+        };
+
+        return (
+          <div className="relative w-screen h-screen flex flex-col items-center justify-center text-gray-800">
+            {/* Background Video */}
+            <video
+              autoPlay
+              loop
+              muted
+              className="absolute inset-0 w-full h-full object-cover opacity-80"
+            >
+              <source src="D:\Cloud\cloud-project\WebApp\Frontend\Background.mp4" type="video/mp4" />
+            </video>
+            <div className="absolute w-screen h-screen bg-white opacity-10"></div>
+            
+            <div className="relative z-10 flex flex-col items-center justify-center p-4">
+              {/* Title Card with Logo */}
+              <div className="flex flex-col items-center justify-center mb-8 p-6 bg-white rounded-2xl shadow-xl text-center">
+                <TrendUpIcon />
+                <h1 className="text-4xl font-extrabold text-indigo-600 mt-2">EXPENSE TRACKER</h1>
+              </div>
+
+              <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
+                <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+                  {isSignUp ? 'Create an Account' : 'Log In'}
+                </h2>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                  {error && <div className="text-red-600 text-center mb-2">{error}</div>}
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Email"
+                      className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200"
+                      required
+                    />
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Password"
+                      className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors duration-200 shadow-lg"
+                  >
+                    {isSignUp ? 'Sign Up' : 'Log In'}
+                  </button>
+                </form>
+                <p className="mt-6 text-center text-sm text-gray-600">
+                  {isSignUp ? 'Already have an account?' : 'Don\'t have an account?'}
+                  <button
+                    onClick={() => setIsSignUp(!isSignUp)}
+                    className="ml-2 text-indigo-600 hover:text-indigo-400 font-semibold"
+                  >
+                    {isSignUp ? 'Log In' : 'Sign Up'}
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // --- Add Expense View ---
+      const AddExpense = ({ onAddExpense, editingExpense, onCancelEdit }) => {
+        const [amount, setAmount] = useState('');
+        const [description, setDescription] = useState('');
+        const [category, setCategory] = useState('Food');
+        const [customCategory, setCustomCategory] = useState('');
+
+        const categories = ['Food', 'Travel', 'Shopping', 'Bills', 'Rent', 'Entertainment', 'Health', 'Groceries', 'Education', 'Other'];
+
+        useEffect(() => {
+            if (editingExpense) {
+                setAmount(editingExpense.amount.toString());
+                setDescription(editingExpense.description);
+                setCategory(editingExpense.category);
+            } else {
+                setAmount('');
+                setDescription('');
+                setCategory('Food');
+            }
+        }, [editingExpense]);
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+          let finalCategory = category;
+          if (category === 'Other' && customCategory) {
+              finalCategory = customCategory;
+          }
+          if (amount && description && finalCategory) {
+            const newExpense = {
+              id: editingExpense ? editingExpense.id : null,
+              amount: parseFloat(amount),
+              note: description,
+              category: finalCategory,
+            };
+            onAddExpense(newExpense);
+          }
+        };
+
+        return (
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+                {editingExpense ? 'Edit Expense' : 'Add New Expense'}
+            </h2>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4 bg-white p-6 rounded-xl shadow-lg">
+              <div className="flex flex-col">
+                <label htmlFor="amount" className="font-medium text-gray-700 mb-1">
+                  Amount (₹)
+                </label>
+                <input
+                  id="amount"
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="e.g., 50.00"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow duration-200"
+                  required
+                />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="description" className="font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <input
+                  id="description"
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g., Coffee with friends"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow duration-200"
+                  required
+                />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="category" className="font-medium text-gray-700 mb-1">
+                  Category
+                </label>
+                <select
+                  id="category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow duration-200"
+                  required
+                >
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+                {category === 'Other' && (
+                    <input
+                        type="text"
+                        value={customCategory}
+                        onChange={(e) => setCustomCategory(e.target.value)}
+                        placeholder="Specify category"
+                        className="mt-2 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow duration-200"
+                        required
+                    />
+                )}
+              </div>
+              <div className="flex space-x-4">
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors duration-200 shadow-lg"
+                >
+                  {editingExpense ? 'Update Expense' : 'Add Expense'}
+                </button>
+                {editingExpense && (
+                    <button
+                        type="button"
+                        onClick={onCancelEdit}
+                        className="flex-1 py-3 bg-gray-300 text-gray-800 font-bold rounded-lg hover:bg-gray-400 transition-colors duration-200 shadow-lg"
+                    >
+                        Cancel
+                    </button>
+                )}
+              </div>
+            </form>
+          </div>
+        );
+      };
+
+      // --- Dashboard View ---
+      const Dashboard = ({ expenses, onDeleteExpense, onEditExpense, spendingGoals, onUpdateGoals }) => {
+        const pieChartRef = useRef(null);
+        const pieChartInstance = useRef(null);
+        const barChartRef = useRef(null);
+        const barChartInstance = useRef(null);
+        
+        const topSpendingCategories = Object.values(
+          expenses.reduce((acc, expense) => {
+            if (!acc[expense.category]) {
+              acc[expense.category] = { name: expense.category, total: 0 };
+            }
+            acc[expense.category].total += expense.amount;
+            return acc;
+          }, {})
+        ).sort((a, b) => b.total - a.total).slice(0, 5);
+        
+        const monthlyData = expenses.reduce((acc, expense) => {
+            const date = new Date(expense.created_at);
+            const monthYear = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+            acc[monthYear] = (acc[monthYear] || 0) + expense.amount;
+            return acc;
+        }, {});
+
+        const last3MonthsData = Object.entries(monthlyData)
+          .sort(([a,], [b,]) => new Date(a) - new Date(b))
+          .slice(-3);
+
+        const last3MonthsLabels = last3MonthsData.map(([month]) => month);
+        const last3MonthsValues = last3MonthsData.map(([, total]) => total);
+
+        const pieChartData = Object.values(
+          expenses.reduce((acc, expense) => {
+            if (!acc[expense.category]) {
+              acc[expense.category] = { name: expense.category, value: 0 };
+            }
+            acc[expense.category].value += expense.amount;
+            return acc;
+          }, {})
+        );
+
+        const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#FF8042', '#AF19FF', '#FF197F'];
+
+        useEffect(() => {
+            if (pieChartInstance.current) {
+                pieChartInstance.current.destroy();
+            }
+            if (pieChartData.length > 0 && pieChartRef.current) {
+                const ctx = pieChartRef.current.getContext('2d');
+                pieChartInstance.current = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: pieChartData.map(d => d.name),
+                        datasets: [{
+                            data: pieChartData.map(d => d.value),
+                            backgroundColor: COLORS.slice(0, pieChartData.length),
+                            hoverOffset: 4,
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed;
+                                        return `${label}: ₹${value.toFixed(2)}`;
+                                    }
+                                }
+                            }
+                        },
+                    },
+                });
+            }
+
+            if (barChartInstance.current) {
+                barChartInstance.current.destroy();
+            }
+            if (last3MonthsValues.length > 0 && barChartRef.current) {
+                const ctx = barChartRef.current.getContext('2d');
+                barChartInstance.current = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: last3MonthsLabels,
+                        datasets: [{
+                            label: 'Monthly Spending',
+                            data: last3MonthsValues,
+                            backgroundColor: '#8884d8',
+                        }],
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: false,
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.parsed.y;
+                                        return `₹${value.toFixed(2)}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Amount (₹)',
+                                }
+                            }
+                        }
+                    },
+                });
+            }
+        }, [expenses]);
+        
+        const getProgressColor = (current, goal) => {
+            const percentage = (current / goal) * 100;
+            if (percentage < 50) return 'bg-green-500';
+            if (percentage < 90) return 'bg-yellow-500';
+            return 'bg-red-500';
+        };
+
+        return (
+          <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <h2 className="text-2xl font-bold text-center text-gray-800 col-span-full">Your Dashboard</h2>
+            
+            {/* Top Row of Insights */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:col-span-1">
+                {/* Spending Goals and Progress */}
+                <div className="bg-white p-6 rounded-xl shadow-lg md:col-span-2">
+                    <h3 className="text-xl font-semibold text-gray-700 mb-4">Spending Goals</h3>
+                    <div className="space-y-4">
+                        {Object.entries(spendingGoals).map(([category, goal]) => {
+                            const spent = expenses.filter(e => e.category === category).reduce((sum, e) => sum + e.amount, 0);
+                            const progress = Math.min((spent / goal) * 100, 100);
+                            return (
+                                <div key={category}>
+                                    <div className="flex justify-between font-medium">
+                                        <span>{category}</span>
+                                        <span>₹{spent.toFixed(2)} / ₹{goal.toFixed(2)}</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2.5 mt-1">
+                                        <div 
+                                            className={`h-2.5 rounded-full ${getProgressColor(spent, goal)}`} 
+                                            style={{ width: `${progress}%` }}
+                                        ></div>
+                                    </div>
+                                    {spent > goal && <span className="text-red-500 text-xs font-semibold mt-1">Goal exceeded!</span>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Top Spending Categories */}
+                <div className="bg-white p-6 rounded-xl shadow-lg md:col-span-2">
+                    <h3 className="text-xl font-semibold text-gray-700 mb-4 text-center">Top Spending Categories</h3>
+                    {topSpendingCategories.length > 0 ? (
+                        <ul className="space-y-2">
+                            {topSpendingCategories.map((item, index) => (
+                                <li key={index} className="flex justify-between items-center text-gray-700 font-medium">
+                                    <span>{item.name}</span>
+                                    <span>₹{item.total.toFixed(2)}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="text-center text-gray-500">No expenses to display.</p>
+                    )}
+                </div>
+
+               
+
+            </div>
+            
+            {/* Recent Expenses Section - Separate Column */}
+            <div className="bg-white p-6 rounded-xl shadow-lg lg:col-span-1 h-[900px]">
+              <h3 className="text-xl font-semibold text-gray-400 mb-4">Recent Expenses</h3>
+              {expenses.length > 0 ? (
+                <div className="overflow-y-auto max-h-[820px]">
+                    <ul className="divide-y divide-gray-200">
+                    {expenses.map((expense) => (
+                        <li key={expense.id} className="py-4 flex justify-between items-center">
+                        <div>
+                            <div className="font-semibold text-gray-800">{expense.description}</div>
+                            <div className="text-sm text-gray-500">Category: {expense.category}</div>
+                        </div>
+                        <div className="flex-shrink-0 flex items-center space-x-4">
+                            <span className={`px-2 py-1 font-semibold rounded-full text-lg ${
+                            expense.category === 'Food' ? 'bg-indigo-100 text-indigo-800' :
+                            expense.category === 'Travel' ? 'bg-green-100 text-green-800' :
+                            expense.category === 'Shopping' ? 'bg-yellow-100 text-yellow-800' :
+                            expense.category === 'Bills' ? 'bg-red-100 text-red-800' :
+                            expense.category === 'Entertainment' ? 'bg-purple-100 text-purple-800' :
+                            'bg-gray-200 text-gray-700'
+                            }`}>
+                            ₹{expense.amount.toFixed(2)}
+                            </span>
+                            <div className="flex space-x-2">
+                                <button
+                                    onClick={() => onEditExpense(expense)}
+                                    className="p-2 text-indigo-600 hover:text-indigo-800"
+                                >
+                                    <EditIcon />
+                                </button>
+                                <button
+                                    onClick={() => onDeleteExpense(expense.id)}
+                                    className="p-2 text-red-600 hover:text-red-800"
+                                >
+                                    <TrashIcon />
+                                </button>
+                            </div>
+                        </div>
+                        </li>
+                    ))}
+                    </ul>
+                </div>
+              ) : (
+                <p className="text-center text-gray-500">No expenses added yet.</p>
+              )}
+            </div>
+            {/* Pie Chart Section */}
+                <div className="bg-white p-6 rounded-xl shadow-lg md:col-span-1 ">
+                  <h3 className="text-xl font-semibold text-gray-700 mb-4 text-center">Category Breakdown</h3>
+                  {pieChartData.length > 0 ? (
+                    <div className="w-full h-[300px]">
+                      <canvas ref={pieChartRef} id="pie-chart"></canvas>
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500">Add some expenses to see your dashboard!</p>
+                  )}
+                </div>
+
+                {/* Bar Chart Section */}
+                <div className="bg-white p-6 rounded-xl shadow-lg md:col-span-1">
+                  <h3 className="text-xl font-semibold text-gray-700 mb-4 text-center">Monthly Spending</h3>
+                  {last3MonthsValues.length > 0 ? (
+                    <div className="w-full h-[300px]">
+                      <canvas ref={barChartRef} id="bar-chart"></canvas>
+                    </div>
+                  ) : (
+                    <p className="text-center text-gray-500">Add some expenses to see your monthly trends!</p>
+                  )}
+                </div> 
+          </div>
+          
+        );
+      };
+
+      
+
+      // --- Main App Component ---
+      const App = () => {
+        const [isLoggedIn, setIsLoggedIn] = useState(false);
+        const [token, setToken] = useState(null);
+        const [currentView, setCurrentView] = useState('Dashboard');
+        const [expenses, setExpenses] = useState([]);
+        const [editingExpense, setEditingExpense] = useState(null);
+        const [showGoalsModal, setShowGoalsModal] = useState(false);
+        const [spendingGoals, setSpendingGoals] = useState({
+            'Food': 5000,
+            'Travel': 3000,
+            'Shopping': 2000,
+            'Bills': 7000,
+            'Rent': 15000,
+            'Entertainment': 2500,
+            'Health': 1000,
+            'Groceries': 4000,
+            'Education': 6000,
+            'Other': 1000
+        });
+        
+        const onCancelEdit = () => {
+            setEditingExpense(null);
+            setCurrentView('Dashboard');
+        };
+
+        // A helper function to make authenticated API requests
+        const apiClient = async (path, method = 'GET', data = null) => {
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+
+          const options = {
+            method,
+            headers,
+            body: data ? JSON.stringify(data) : null,
+          };
+
+          const response = await fetch(`${API_URL}${path}`, options);
+          return response;
+        };
+
+        const fetchExpenses = async () => {
+          try {
+            const response = await apiClient('/api/expenses');
+            if (response.ok) {
+              const data = await response.json();
+              // Map backend fields to frontend format
+              const formattedExpenses = data.map(exp => ({
+                id: exp.id,
+                amount: exp.amount,
+                description: exp.note, // Note: using 'note' from backend as 'description'
+                category: exp.category,
+                created_at: exp.created_at, // Use created_at for chart aggregation
+                date: new Date(exp.created_at).toLocaleDateString()
+              }));
+              setExpenses(formattedExpenses);
+            } else {
+              console.error('Failed to fetch expenses:', await response.json());
+            }
+          } catch (error) {
+            console.error('Error fetching expenses:', error);
+          }
+        };
+
+        // Effect to fetch expenses after login
+        useEffect(() => {
+          if (token) {
+            fetchExpenses();
+          }
+        }, [token]);
+
+        const handleLogin = (jwtToken) => {
+          setToken(jwtToken);
+          setIsLoggedIn(true);
+          setCurrentView('Dashboard');
+        };
+
+        const handleLogout = () => {
+          setIsLoggedIn(false);
+          setToken(null);
+          setExpenses([]);
+          setCurrentView('Login');
+        };
+
+        const handleAddExpense = async (newExpense) => {
+          try {
+            const response = await apiClient('/api/expenses', 'POST', newExpense);
+            if (response.ok) {
+              console.log("Expense added successfully!");
+              await fetchExpenses(); // Refresh expenses
+              setCurrentView('Dashboard');
+            } else {
+              console.error('Failed to add expense:', await response.json());
+            }
+          } catch (error) {
+            console.error('Error adding expense:', error);
+          }
+        };
+        
+        const handleEditExpense = (expense) => {
+            setEditingExpense(expense);
+            setCurrentView('AddExpense');
+        };
+
+        const handleUpdateExpense = async (updatedExpense) => {
+            try {
+                const response = await apiClient(`/api/expenses/${updatedExpense.id}`, 'PATCH', {
+                    amount: updatedExpense.amount,
+                    note: updatedExpense.description,
+                    category: updatedExpense.category,
+                });
+                if (response.ok) {
+                    console.log("Expense updated successfully!");
+                    setEditingExpense(null);
+                    await fetchExpenses();
+                    setCurrentView('Dashboard');
+                } else {
+                    console.error('Failed to update expense:', await response.json());
+                }
+            } catch (error) {
+                console.error('Error updating expense:', error);
+            }
+        };
+
+        const handleDeleteExpense = async (id) => {
+            if (!confirm("Are you sure you want to delete this expense?")) {
+                return;
+            }
+            try {
+                const response = await apiClient(`/api/expenses/${id}`, 'DELETE');
+                if (response.ok) {
+                    console.log("Expense deleted successfully!");
+                    await fetchExpenses();
+                    setCurrentView('Dashboard');
+                } else {
+                    console.error('Failed to delete expense:', await response.json());
+                }
+            } catch (error) {
+                console.error('Error deleting expense:', error);
+            }
+        };
+        
+        const handleUpdateGoals = (newGoals) => {
+            setSpendingGoals(newGoals);
+            // In a real app, you would send this to the backend
+            console.log('Updated goals:', newGoals);
+        };
+        
+        const onOpenGoals = () => {
+            setShowGoalsModal(true);
+        };
+        
+        const onCloseGoals = () => {
+            setShowGoalsModal(false);
+        };
+
+
+        const renderView = () => {
+          if (!isLoggedIn) {
+            return <Login onLogin={handleLogin} />;
+          }
+          return (
+            <div className="flex h-screen bg-gray-100">
+              <Sidebar onLogout={handleLogout} onViewChange={setCurrentView} currentView={currentView} onOpenGoals={onOpenGoals} />
+              <div className="flex-1 overflow-auto p-4 md:p-8">
+                {currentView === 'Dashboard' ? (
+                  <Dashboard expenses={expenses} onEditExpense={handleEditExpense} onDeleteExpense={handleDeleteExpense} spendingGoals={spendingGoals} onUpdateGoals={handleUpdateGoals} />
+                ) : (
+                  <AddExpense onAddExpense={editingExpense ? handleUpdateExpense : handleAddExpense} editingExpense={editingExpense} onCancelEdit={onCancelEdit} />
+                )}
+              </div>
+              {showGoalsModal && <SetGoalsModal goals={spendingGoals} onUpdateGoals={handleUpdateGoals} onClose={onCloseGoals} />}
+            </div>
+          );
+        };
+
+        return (
+          <div className="font-sans antialiased bg-gray-100 min-h-screen">
+            {isLoggedIn ? renderView() : <Login onLogin={handleLogin} />}
+          </div>
+        );
+      };
+
+      ReactDOM.render(<App />, document.getElementById('root'));
+    }
+  </script>
+</body>
+</html>
