@@ -24,6 +24,7 @@ pytz==2024.1
 # Background Scheduler (for automatic email reminders)
 # ------------------------
 APScheduler==3.10.4
+gunicorn
 
 # ------------------------
 # Data Validation / Safety (optional but useful)
