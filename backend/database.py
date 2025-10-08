@@ -1,4 +1,3 @@
-# database.py
 from flask_pymongo import PyMongo
 import sys
 
@@ -11,7 +10,6 @@ def init_db(app):
     mongo.init_app(app)
 
     try:
-        # Ping the server to check connection
         mongo.db.command("ping")
         print("✅ MongoDB connected successfully!", file=sys.stdout)
     except Exception as e:
@@ -21,7 +19,7 @@ def init_db(app):
     # Create collections and indexes safely
     with app.app_context():
         db = mongo.db
-        if db:
+        if db is not None:   # ✅ fixed line here
             users = db.users
             expenses = db.expenses
             finance = db.finance
