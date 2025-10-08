@@ -1,0 +1,2740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expense Tracker</title>
+  <!-- Load Tailwind CSS from CDN for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Load React and ReactDOM from CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Load Chart.js for all charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Load Lottie-web for animations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.0/lottie.min.js"></script>
+  <!-- Load Babel to transform JSX syntax on the fly -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f3f4f6; /* Light gray background */
+    }
+  </style>
+
+  <style>
+    @keyframes gradientMove {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .animate-gradient-move {
+      background-size: 200% 200%;
+      animation: gradientMove 6s ease infinite;
+    }
+    </style>
+
+</head>
+<body class="bg-gray-100">
+  <div id="root"></div>
+
+  <!-- The main application code using JSX -->
+  <script type="text/babel">
+    window.onload = function() {
+      const { useState, useEffect, useRef } = React;
+      const API_URL = "http://127.0.0.1:5000";
+
+      // --- Icon components using inline SVG to avoid dependencies ---
+      const LogOutIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+        </svg>
+      );
+
+      const PlusIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus">
+          <path d="M5 12h14"/><path d="M12 5v14"/>
+        </svg>
+      );
+
+      const ChartIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-bar-chart-2">
+          <line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/>
+        </svg>
+      );
+      
+      const TrendUpIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trending-up text-indigo-600">
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+        </svg>
+      );
+
+      const EditIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-edit">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      );
+
+      const TrashIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-trash-2">
+          <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>
+        </svg>
+      );
+      
+      const TargetIcon = () => (
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-target">
+              <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>
+          </svg>
+      );
+      
+      const CloseIcon = () => (
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x">
+            <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+        </svg>
+      );
+
+      
+      const AnalyticsIcon = () => (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="lucide lucide-trending-up"
+        >
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+          <polyline points="16 7 22 7 22 13" />
+        </svg>
+      );
+      
+
+      const Avatar = () => {
+        const container = useRef(null);
+        useEffect(() => {
+          if (container.current) {
+            const animation = lottie.loadAnimation({
+              container: container.current,
+              renderer: 'svg',
+              loop: true,
+              autoplay: true,
+              path: 'https://lottie.host/17094b9f-d596-410c-99c9-60916e788c2f/xXhK2f481Y.json'
+            });
+            return () => animation.destroy();
+          }
+        }, []);
+        return <div ref={container} className="w-48 h-48 md:w-64 md:h-64"></div>;
+      };
+
+      
+      // --- Layout & Nav Components ---
+      const Sidebar = ({ onLogout, onViewChange, currentView, onOpenGoals }) => (
+        <nav className="flex flex-col items-center p-4 bg-gray-800 text-white shadow-lg w-20 md:w-56 h-screen">
+          <div className="flex flex-col items-center gap-4 w-full">
+            <h1 className="text-xl font-bold mb-4 md:block hidden">Tracker</h1>
+            <button
+              onClick={() => onViewChange('Dashboard')}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors duration-200 w-full ${
+                currentView === 'Dashboard' ? 'bg-indigo-600' : 'hover:bg-gray-700'
+              }`}
+            >
+          
+              <ChartIcon />
+              <span className="text-xs md:block hidden">Dashboard</span>
+            </button>
+            <button
+              onClick={() => onViewChange('AddExpense')}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors duration-200 w-full ${
+                currentView === 'AddExpense' ? 'bg-indigo-600' : 'hover:bg-gray-700'
+              }`}
+            >
+              <PlusIcon />
+              <span className="text-xs md:block hidden">Add Expense</span>
+            </button>
+            <button
+              onClick={() => onViewChange('Analytics')}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors duration-200 w-full ${
+                currentView === 'Analytics' ? 'bg-indigo-600' : 'hover:bg-gray-700'
+              }`}
+            >
+              <AnalyticsIcon />
+              <span className="text-xs md:block hidden">Analytics</span>
+            </button>
+
+            <button
+              onClick={() => onViewChange('FinanceHub')}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors duration-200 w-full ${
+                currentView === 'FinanceHub' ? 'bg-indigo-600' : 'hover:bg-gray-700'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                  fill="none" stroke="currentColor" strokeWidth="2"
+                  strokeLinecap="round" strokeLinejoin="round"
+                  className="lucide lucide-pie-chart">
+                <path d="M21.21 15.89A10 10 0 1 1 8.11 2.79 10 10 0 0 1 21.21 15.89z"/>
+                <path d="M22 12A10 10 0 0 1 12 2v10z"/>
+              </svg>
+              <span className="text-xs md:block hidden">Finance Hub</span>
+            </button>
+
+            
+
+
+            <button
+              onClick={onOpenGoals}
+              className="flex flex-col items-center gap-1 p-2 rounded-lg transition-colors duration-200 w-full hover:bg-gray-700"
+            >
+                <TargetIcon />
+                <span className="text-xs md:block hidden">Set Goals</span>
+            </button>
+
+            <button
+              onClick={() => onViewChange('EMILoans')}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors duration-200 w-full ${
+                currentView === 'EMILoans' ? 'bg-indigo-600' : 'hover:bg-gray-700'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                fill="none" stroke="currentColor" strokeWidth="2"
+                strokeLinecap="round" strokeLinejoin="round"
+                className="lucide lucide-credit-card">
+                <rect x="2" y="5" width="20" height="14" rx="2" />
+                <line x1="2" x2="22" y1="10" y2="10" />
+              </svg>
+              <span className="text-xs md:block hidden">EMIs & Loans</span>
+            </button>
+
+
+            <button
+              onClick={() => onViewChange('Stocks')}
+              className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-colors duration-200 w-full ${
+                currentView === 'Stocks' ? 'bg-indigo-600' : 'hover:bg-gray-700'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                  fill="none" stroke="currentColor" strokeWidth="2"
+                  strokeLinecap="round" strokeLinejoin="round"
+                  className="lucide lucide-line-chart">
+                <path d="M3 3v18h18"/>
+                <path d="m19 9-5 5-4-4-6 6"/>
+              </svg>
+              <span className="text-xs md:block hidden">Stocks</span>
+            </button>
+
+
+       
+          </div>
+
+          
+          <button onClick={onLogout} className="mt-auto p-2 rounded-full hover:bg-red-500 transition-colors duration-200">
+            <LogOutIcon />
+          </button>
+
+          
+        </nav>
+      );
+      
+      const SetGoalsModal = ({ goals, onUpdateGoals, onClose }) => {
+        const [tempGoals, setTempGoals] = useState(goals);
+        const categories = Object.keys(tempGoals);
+
+        const handleChange = (e) => {
+            const { name, value } = e.target;
+            setTempGoals(prev => ({ ...prev, [name]: parseFloat(value) || 0 }));
+        };
+
+        const handleSubmit = () => {
+            onUpdateGoals(tempGoals);
+            onClose();
+        };
+
+        return (
+            <div className="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative">
+                    <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
+                        <CloseIcon />
+                    </button>
+                    <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">Set Monthly Goals</h2>
+                    <div className="space-y-4">
+                        {categories.map(cat => (
+                            <div className="flex items-center space-x-4" key={cat}>
+                                <label className="flex-1 text-gray-700 font-medium">{cat}</label>
+                                <input
+                                    type="number"
+                                    name={cat}
+                                    value={tempGoals[cat] || ''}
+                                    onChange={handleChange}
+                                    className="w-28 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                    <button
+                        onClick={handleSubmit}
+                        className="w-full mt-8 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors duration-200 shadow-lg"
+                    >
+                        Save Goals
+                    </button>
+                </div>
+            </div>
+        );
+      };
+
+      // --- Login/Signup View ---
+      const Login = ({ onLogin }) => {
+        const [isSignUp, setIsSignUp] = useState(false);
+        const [email, setEmail] = useState('');
+        const [password, setPassword] = useState('');
+        const [error, setError] = useState('');
+
+        const handleSubmit = async (e) => {
+          e.preventDefault();
+          setError('');
+          const endpoint = isSignUp ? `${API_URL}/auth/signup` : `${API_URL}/auth/login`;
+
+          try {
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username: email, password: password }),
+            });
+            const data = await response.json();
+
+            if (response.ok) {
+              if (!isSignUp) {
+                onLogin(data.token, email);
+              } else {
+                // After successful signup, switch to login view
+                alert('Signup successful! Please log in.');
+                setIsSignUp(false);
+              }
+            } else {
+              setError(data.msg || 'An error occurred.');
+            }
+          } catch (err) {
+            setError('Failed to connect to the server.');
+          }
+        };
+
+        return (
+          <div className="relative w-screen h-screen flex flex-col items-center justify-center text-gray-800">
+            {/* Background Video */}
+            <video
+              autoPlay
+              loop
+              muted
+              className="absolute inset-0 w-full h-full object-cover opacity-80"
+            >
+              <source src="D:\WebApp\ExpenseTracker\Frontend\5466772-hd_1920_1080_25fps.mp4" type="video/mp4" />
+            </video>
+            <div className="absolute w-screen h-screen bg-white opacity-5"></div>
+            
+            <div className="relative z-10 flex flex-col items-center justify-center p-4">
+              {/* Title Card with Logo */}
+              <div className="flex flex-col items-center justify-center mb-8 p-6 bg-white rounded-2xl shadow-xl text-center">
+                <TrendUpIcon />
+                <h1 className="text-4xl font-extrabold text-indigo-600 mt-2">EXPENSE TRACKER</h1>
+              </div>
+
+              <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-sm">
+                <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+                  {isSignUp ? 'Create an Account' : 'Log In'}
+                </h2>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                  {error && <div className="text-red-600 text-center mb-2">{error}</div>}
+                  <div className="relative">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Email"
+                      className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200"
+                      required
+                    />
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Password"
+                      className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors duration-200"
+                      required
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors duration-200 shadow-lg"
+                  >
+                    {isSignUp ? 'Sign Up' : 'Log In'}
+                  </button>
+                </form>
+                <p className="mt-6 text-center text-sm text-gray-600">
+                  {isSignUp ? 'Already have an account?' : 'Don\'t have an account?'}
+                  <button
+                    onClick={() => setIsSignUp(!isSignUp)}
+                    className="ml-2 text-indigo-600 hover:text-indigo-400 font-semibold"
+                  >
+                    {isSignUp ? 'Log In' : 'Sign Up'}
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // --- Add Expense View ---
+      const AddExpense = ({ onAddExpense, editingExpense, onCancelEdit }) => {
+        const [amount, setAmount] = useState('');
+        const [description, setDescription] = useState('');
+        const [category, setCategory] = useState('Food');
+        const [customCategory, setCustomCategory] = useState('');
+        const [date, setDate] = useState('');
+
+
+        const categories = ['Food', 'Travel', 'Shopping', 'Bills', 'Rent', 'Entertainment', 'Health', 'Groceries', 'Education', 'Other'];
+
+        useEffect(() => {
+            if (editingExpense) {
+                setAmount(editingExpense.amount.toString());
+                setDescription(editingExpense.description);
+                setCategory(editingExpense.category);
+            } else {
+                setAmount('');
+                setDescription('');
+                setCategory('Food');
+            }
+        }, [editingExpense]);
+
+        useEffect(() => {
+          if (category !== "Other") {
+            setCustomCategory("");
+          }
+        }, [category]);
+
+        const handleSubmit = (e) => {
+          e.preventDefault();
+
+          if (amount && description && category) {
+            const newExpense = {
+              id: editingExpense ? editingExpense.id : null,
+              amount: parseFloat(amount),
+              description: description, // ✅ match key used in handleUpdateExpense
+              category: category,
+              note: description,         // ✅ still send as note for backend add route
+              date: date ? new Date(date).toISOString() : null,
+            };
+
+
+            onAddExpense(newExpense);
+
+            // Reset after submission
+            setAmount('');
+            setDescription('');
+            setCategory('Food');
+          }
+        };
+
+
+        return (
+          <div className="p-6">
+            <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+                {editingExpense ? 'Edit Expense' : 'Add New Expense'}
+            </h2>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4 bg-white p-6 rounded-xl shadow-lg">
+              <div className="flex flex-col">
+                <label htmlFor="amount" className="font-medium text-gray-700 mb-1">
+                  Amount (₹)
+                </label>
+                <input
+                  id="amount"
+                  type="number"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="e.g., 50.00"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow duration-200"
+                  required
+                />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="description" className="font-medium text-gray-700 mb-1">
+                  Description
+                </label>
+                <input
+                  id="description"
+                  type="text"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g., Coffee with friends"
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow duration-200"
+                  required
+                />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="category" className="font-medium text-gray-700 mb-1">
+                  Category
+                </label>
+                <select
+                  id="category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow duration-200"
+                  required
+                >
+                  {categories.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {/* ✅ New Date Picker Input */}
+              <div className="flex flex-col">
+                <label htmlFor="date" className="font-medium text-gray-700 mb-1">
+                  Date
+                </label>
+                <input
+                  id="date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow duration-200"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  (Optional: choose a past date if you have missed any)
+                </p>
+              </div>
+
+              <div className="flex space-x-4">
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-700 transition-colors duration-200 shadow-lg"
+                >
+                  {editingExpense ? 'Update Expense' : 'Add Expense'}
+                </button>
+                {editingExpense && (
+                    <button
+                        type="button"
+                        onClick={onCancelEdit}
+                        className="flex-1 py-3 bg-gray-300 text-gray-800 font-bold rounded-lg hover:bg-gray-400 transition-colors duration-200 shadow-lg"
+                    >
+                        Cancel
+                    </button>
+                )}
+              </div>
+            </form>
+          </div>
+        );
+      };
+
+      // --- Dashboard View ---
+      const Dashboard = ({ expenses, onDeleteExpense, onEditExpense, spendingGoals, onUpdateGoals, userEmail }) => {
+        const pieChartRef = useRef(null);
+        const pieChartInstance = useRef(null);
+        const barChartRef = useRef(null);
+        const barChartInstance = useRef(null);
+        const cumulativeRef = useRef(null);
+        const essentialsRef = useRef(null);
+        const largestRef = useRef(null);
+        const hasEmailedRef = React.useRef(new Set());
+        const [showPopup, setShowPopup] = useState(false);
+        const [popupMessage, setPopupMessage] = useState("");
+
+
+        const sendGoalExceededEmail = async (category, spent, goal) => {
+          if (!userEmail) {
+            console.warn("⚠️ No user email, cannot send goal alert");
+            return;
+          }
+
+          try {
+            const res = await fetch(`${API_URL}/api/notify_goal_exceeded`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                category,
+                spent,
+                goal,
+                email: userEmail, // ✅ dynamic user email
+              }),
+            });
+
+            if (res.ok) {
+              console.log(`✅ Goal exceeded email sent to: ${userEmail}`);
+              setPopupMessage(`📧 Notification sent to ${userEmail}`);
+              setShowPopup(true);
+              setTimeout(() => setShowPopup(false), 5000); // hide after 4s
+            } else {
+              console.error("❌ Failed to send goal email", await res.text());
+            }
+          } catch (err) {
+            console.error("❌ Error sending email:", err);
+          }
+        };
+
+        
+
+        const topSpendingCategories = Object.values(
+          expenses.reduce((acc, expense) => {
+            if (!acc[expense.category]) {
+              acc[expense.category] = { name: expense.category, total: 0 };
+            }
+            acc[expense.category].total += expense.amount;
+            return acc;
+          }, {})
+        ).sort((a, b) => b.total - a.total).slice(0, 5);
+        
+        const monthlyData = expenses.reduce((acc, expense) => {
+            const date = new Date(expense.created_at);
+            const monthYear = date.toLocaleString('default', { month: 'short', year: 'numeric' });
+            acc[monthYear] = (acc[monthYear] || 0) + expense.amount;
+            return acc;
+        }, {});
+
+        const last3MonthsData = Object.entries(monthlyData)
+          .sort(([a,], [b,]) => new Date(a) - new Date(b))
+          .slice(-3);
+
+        const last3MonthsLabels = last3MonthsData.map(([month]) => month);
+        const last3MonthsValues = last3MonthsData.map(([, total]) => total);
+
+        const pieChartData = Object.values(
+          expenses.reduce((acc, expense) => {
+            if (!acc[expense.category]) {
+              acc[expense.category] = { name: expense.category, value: 0 };
+            }
+            acc[expense.category].value += expense.amount;
+            return acc;
+          }, {})
+        );
+
+        const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#FF8042', '#AF19FF', '#FF197F'];
+
+
+        useEffect(() => {
+          // 🧹 Destroy old charts before re-creating
+          [cumulativeRef, essentialsRef, largestRef].forEach(ref => {
+            if (ref.current?.chartInstance) {
+              ref.current.chartInstance.destroy();
+            }
+          });
+
+          if (!expenses || expenses.length === 0) return;
+
+          // --- Cumulative Spending Line Chart ---
+          if (cumulativeRef.current) {
+            const ctx = cumulativeRef.current.getContext("2d");
+            const dailyTotals = {};
+            expenses.forEach(e => {
+              const day = new Date(e.created_at).toISOString().split("T")[0];
+              dailyTotals[day] = (dailyTotals[day] || 0) + e.amount;
+            });
+
+            const sortedDates = Object.keys(dailyTotals).sort();
+            const cumulative = [];
+            let sum = 0;
+            sortedDates.forEach(d => {
+              sum += dailyTotals[d];
+              cumulative.push(sum);
+            });
+
+            const chart = new Chart(ctx, {
+              type: "line",
+              data: {
+                labels: sortedDates,
+                datasets: [{
+                  label: "Cumulative Spend (₹)",
+                  data: cumulative,
+                  borderColor: "#4F46E5",
+                  backgroundColor: "rgba(79,70,229,0.1)",
+                  tension: 0.3,
+                  fill: true
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: { legend: { position: "top" } }
+              }
+            });
+
+            cumulativeRef.current.chartInstance = chart;
+          }
+
+          // --- Essentials vs Non-Essentials Doughnut ---
+          if (essentialsRef.current) {
+            const ctx = essentialsRef.current.getContext("2d");
+            const essentials = ["Food", "Rent", "Bills", "Groceries"];
+            let essentialsTotal = 0, nonEssentialsTotal = 0;
+
+            expenses.forEach(e => {
+              if (essentials.includes(e.category)) essentialsTotal += e.amount;
+              else nonEssentialsTotal += e.amount;
+            });
+
+            const chart = new Chart(ctx, {
+              type: "doughnut",
+              data: {
+                labels: ["Essentials", "Non-Essentials"],
+                datasets: [{
+                  data: [essentialsTotal, nonEssentialsTotal],
+                  backgroundColor: ["#10B981", "#F59E0B"]
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: { legend: { position: "bottom" } }
+              }
+            });
+
+            essentialsRef.current.chartInstance = chart;
+          }
+
+          // --- Top 5 Largest Expenses ---
+          if (largestRef.current) {
+            const ctx = largestRef.current.getContext("2d");
+            const top5 = [...expenses]
+              .sort((a, b) => b.amount - a.amount)
+              .slice(0, 5);
+
+            const chart = new Chart(ctx, {
+              type: "bar",
+              data: {
+                labels: top5.map(e => e.description || e.category),
+                datasets: [{
+                  label: "Amount (₹)",
+                  data: top5.map(e => e.amount),
+                  backgroundColor: "#EF4444"
+                }]
+              },
+              options: {
+                indexAxis: "y",
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true } }
+              }
+            });
+
+            largestRef.current.chartInstance = chart;
+          }
+        }, [expenses]);
+
+        
+        const getProgressColor = (current, goal) => {
+            const percentage = (current / goal) * 100;
+            if (percentage < 50) return 'bg-green-500';
+            if (percentage < 90) return 'bg-yellow-500';
+            return 'bg-red-500';
+        };
+
+        
+
+        return (
+          <div className="p-6 space-y-8">
+            <h2 className="text-2xl font-bold text-center text-gray-800">Your Dashboard</h2>
+
+            {/* ===== Top Row ===== */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* --- Spending Goals --- */}
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-xl font-semibold text-gray-700 mb-4">Spending Goals</h3>
+                <div className="space-y-4">
+                  {Object.entries(spendingGoals).map(([category, goal]) => {
+                    const spent = expenses
+                      .filter(e => e.category === category)
+                      .reduce((sum, e) => sum + e.amount, 0);
+                      if (spent > goal && !hasEmailedRef.current.has(category)) {
+                        hasEmailedRef.current.add(category);
+                        sendGoalExceededEmail(category, spent, goal);
+                      }
+                    const progress = Math.min((spent / goal) * 100, 100);
+                    return (
+                      <div key={category}>
+                        <div className="flex justify-between font-medium">
+                          <span>{category}</span>
+                          <span>₹{spent.toFixed(2)} / ₹{goal.toFixed(2)}</span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5 mt-1">
+                          <div
+                            className={`h-2.5 rounded-full ${getProgressColor(spent, goal)}`}
+                            style={{ width: `${progress}%` }}
+                          ></div>
+                        </div>
+                        {spent > goal && (
+                          <span className="text-red-500 text-xs font-semibold mt-1">Goal exceeded!</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* --- Recent Expenses --- */}
+              <div className="bg-white p-6 rounded-xl shadow-lg h-[620px]">
+                <h3 className="text-xl font-semibold text-gray-700 mb-4">Recent Expenses</h3>
+                {expenses && expenses.length > 0 ? (
+                  <div className="overflow-y-auto max-h-[440px]">
+                    <ul className="divide-y divide-gray-200">
+                      {[...expenses]
+                        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                        .slice(0, 20) // show top 20 newest if you want a limit
+                        .map((expense) => (
+
+
+                        <li key={expense.id} className="py-4 flex justify-between items-center">
+                          <div>
+                            <div className="font-semibold text-gray-800">
+                              {expense.description || expense.note || "(No description)"}
+                            </div>
+
+                            <div className="text-sm text-gray-500">
+                              Category: {expense.category}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 flex items-center space-x-4">
+                            <span
+                              className={`px-2 py-1 font-semibold rounded-full text-sm ${
+                                expense.category === 'Food'
+                                  ? 'bg-indigo-100 text-indigo-800'
+                                  : expense.category === 'Travel'
+                                  ? 'bg-green-100 text-green-800'
+                                  : expense.category === 'Shopping'
+                                  ? 'bg-yellow-100 text-yellow-800'
+                                  : expense.category === 'Bills'
+                                  ? 'bg-red-100 text-red-800'
+                                  : expense.category === 'Entertainment'
+                                  ? 'bg-purple-100 text-purple-800'
+                                  : 'bg-gray-200 text-gray-700'
+                              }`}
+                            >
+                              ₹{expense.amount.toFixed(2)}
+                            </span>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => onEditExpense(expense)}
+                                className="p-2 text-indigo-600 hover:text-indigo-800"
+                              >
+                                <EditIcon />
+                              </button>
+                              <button
+                                onClick={() => onDeleteExpense(expense.id)}
+                                className="p-2 text-red-600 hover:text-red-800"
+                              >
+                                <TrashIcon />
+                              </button>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-500">
+                    No expenses added yet.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* ===== Bottom Row ===== */}
+            {/* ===== Bottom Row (3 Charts Side by Side) ===== */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              
+              {/* Cumulative Spending Over Time */}
+              <div className="bg-white p-4 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">
+                  Cumulative Spending
+                </h3>
+                {expenses.length > 0 ? (
+                  <div className="w-full h-[220px]">
+                    <canvas ref={cumulativeRef}></canvas>
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-500">No data yet.</p>
+                )}
+              </div>
+
+              {/* Essentials vs Non-Essentials */}
+              <div className="bg-white p-4 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">
+                  Essentials vs Non-Essentials
+                </h3>
+                {expenses.length > 0 ? (
+                  <div className="w-full h-[220px]">
+                    <canvas ref={essentialsRef}></canvas>
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-500">Add expenses to compare.</p>
+                )}
+              </div>
+
+              {/* Top 5 Largest Expenses */}
+              <div className="bg-white p-4 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">
+                  Top 5 Largest Expenses
+                </h3>
+                {expenses.length > 0 ? (
+                  <div className="w-full h-[220px]">
+                    <canvas ref={largestRef}></canvas>
+                  </div>
+                ) : (
+                  <p className="text-center text-gray-500">No expenses recorded.</p>
+                )}
+              </div>
+
+              {/* ✅ Popup Notification */}
+
+              {/* 🎉 Colorful Success Popup */}
+              {showPopup && (
+                <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50 animate-fade-in">
+                  <div className="bg-gradient-to-br from-green-400 via-emerald-500 to-teal-500 text-white rounded-3xl shadow-2xl px-8 py-8 text-center transform transition-all scale-100 w-[90%] max-w-md relative overflow-hidden">
+
+                    {/* ✨ Confetti-like background decoration */}
+                    <div className="absolute inset-0 opacity-20 pointer-events-none">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none" className="w-full h-full">
+                        <circle cx="50" cy="50" r="10" fill="white" />
+                        <circle cx="150" cy="80" r="6" fill="white" />
+                        <circle cx="100" cy="150" r="8" fill="white" />
+                        <circle cx="170" cy="130" r="5" fill="white" />
+                        <circle cx="30" cy="160" r="4" fill="white" />
+                      </svg>
+                    </div>
+
+                    {/* ✅ Icon */}
+                    {/* ✅ Icon */}
+                    {/* ✅ Icon */}
+                    <div className="flex justify-center mb-4 relative z-10">
+                      {/* Change background to red and remove blur/transparency */}
+                      <div className="bg-red-600 rounded-full p-4 shadow-xl border-4 border-red-400">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          strokeWidth="2"
+                          stroke="white" /* Keep stroke white for contrast */
+                          className="w-12 h-12"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* 🎯 Text */}
+                    {/* Change text color to a soft, complementary white or light gray */}
+                    <h2 className="text-3xl font-extrabold mb-2 tracking-wide text-gray-100 drop-shadow">
+                      Goal Exceeded!
+                    </h2>
+                    <p className="text-gray-200 text-lg mb-6 font-medium">{popupMessage}</p>
+
+                    {/* ✴️ Button */}
+                    <button
+                      onClick={() => setShowPopup(false)}
+                      /* Change button background to red and text to white */
+                      className="bg-red-700 text-white font-semibold px-6 py-2.5 rounded-lg shadow-lg hover:scale-105 hover:bg-red-600 transition-all duration-300"
+                    >
+                      Got it 🚀
+                    </button>
+
+                  </div>
+                </div>
+              )}
+
+
+
+            </div>
+
+
+                
+
+            {/* ===== Full-Width Summary ===== */}
+            <div className="bg-white p-6 rounded-xl shadow-lg">
+              <h3 className="text-xl font-semibold text-gray-700 mb-4 text-center">
+                Top Spending Categories
+              </h3>
+              {topSpendingCategories.length > 0 ? (
+                <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 text-center">
+                  {topSpendingCategories.map((item, index) => (
+                    <li key={index} className="bg-gray-50 p-3 rounded-lg shadow-sm">
+                      <div className="font-semibold text-gray-800">{item.name}</div>
+                      <div className="text-indigo-600 font-bold text-lg">
+                        ₹{item.total.toFixed(2)}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-center text-gray-500">
+                  No expenses to display.
+                </p>
+              )}
+            </div>
+          </div>
+        );
+
+      };
+
+      // --- Analytics Page Component ---
+      const Analytics = ({ expenses }) => {
+        const lineRef = useRef(null);
+        const radarRef = useRef(null);
+        const barRef = useRef(null);
+        const doughnutRef = useRef(null);
+        const monthRef = useRef(null);
+        const polarRef = useRef(null);
+
+        // ✅ Declare outside useEffect
+        // ✅ Use state so React re-renders summaries when data updates
+        const [dailyTotals, setDailyTotals] = useState({});
+        const [catTotals, setCatTotals] = useState({});
+        const [monthlyTotals, setMonthlyTotals] = useState({});
+        const [avgCat, setAvgCat] = useState([]);
+
+
+        useEffect(() => {
+          // Destroy old charts before re-rendering
+          [lineRef, radarRef, barRef, doughnutRef, monthRef, polarRef].forEach(ref => {
+            if (ref.current?.chartInstance) ref.current.chartInstance.destroy();
+          });
+
+          if (!expenses || expenses.length === 0) return;
+
+          // ---------- Data Aggregation ----------
+          const daily = {};
+          const cats = {};
+          const monthly = {};
+
+          expenses.forEach(e => {
+            const day = new Date(e.created_at).toISOString().split('T')[0];
+            daily[day] = (daily[day] || 0) + e.amount;
+
+            cats[e.category] = (cats[e.category] || 0) + e.amount;
+
+            const d = new Date(e.created_at);
+            const key = d.toLocaleString('default', { month: 'short', year: '2-digit' });
+            monthly[key] = (monthly[key] || 0) + e.amount;
+          });
+
+          const avg = Object.entries(cats).map(([cat, total]) => ({
+            cat,
+            avg: total / (Object.keys(daily).length || 1),
+          }));
+
+          // ✅ Update state for summary display
+          setDailyTotals(daily);
+          setCatTotals(cats);
+          setMonthlyTotals(monthly);
+          setAvgCat(avg);
+
+          // ✅ Use *local variables* for charts (not state)
+          const top5 = Object.entries(cats)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+
+          // ---------- Chart 1: Line (Daily Trend) ----------
+          if (lineRef.current) {
+            const ctx = lineRef.current.getContext('2d');
+            lineRef.current.chartInstance = new Chart(ctx, {
+              type: 'line',
+              data: {
+                labels: Object.keys(daily),
+                datasets: [{
+                  label: 'Daily Spending',
+                  data: Object.values(daily),
+                  borderColor: '#6366f1',
+                  backgroundColor: 'rgba(99,102,241,0.2)',
+                  fill: true,
+                  tension: 0.3
+                }]
+              },
+              options: { responsive: true }
+            });
+          }
+
+          // ---------- Chart 2: Radar (Category Distribution) ----------
+          if (radarRef.current) {
+            const ctx = radarRef.current.getContext('2d');
+            radarRef.current.chartInstance = new Chart(ctx, {
+              type: 'radar',
+              data: {
+                labels: Object.keys(cats),
+                datasets: [{
+                  label: 'Spending by Category',
+                  data: Object.values(cats),
+                  backgroundColor: 'rgba(34,197,94,0.2)',
+                  borderColor: '#22c55e'
+                }]
+              },
+              options: { responsive: true, scales: { r: { beginAtZero: true } } }
+            });
+          }
+
+          // ---------- Chart 3: Bar (Average Daily Spend) ----------
+          if (barRef.current) {
+            const ctx = barRef.current.getContext('2d');
+            barRef.current.chartInstance = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: avg.map(c => c.cat),
+                datasets: [{
+                  label: 'Avg Daily Spend (₹)',
+                  data: avg.map(c => c.avg),
+                  backgroundColor: '#f97316'
+                }]
+              },
+              options: { responsive: true, scales: { y: { beginAtZero: true } } }
+            });
+          }
+
+          // ---------- Chart 4: Doughnut (Top 5 Categories) ----------
+          if (doughnutRef.current) {
+            const ctx = doughnutRef.current.getContext('2d');
+            doughnutRef.current.chartInstance = new Chart(ctx, {
+              type: 'doughnut',
+              data: {
+                labels: top5.map(([cat]) => cat),
+                datasets: [{
+                  label: 'Top Categories',
+                  data: top5.map(([, val]) => val),
+                  backgroundColor: ['#6366f1','#22c55e','#f59e0b','#ef4444','#8b5cf6']
+                }]
+              },
+              options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+            });
+          }
+
+          // ---------- Chart 5: Horizontal Bar (Monthly Trend) ----------
+          if (monthRef.current) {
+            const ctx = monthRef.current.getContext('2d');
+            monthRef.current.chartInstance = new Chart(ctx, {
+              type: 'bar',
+              data: {
+                labels: Object.keys(monthly),
+                datasets: [{
+                  label: 'Monthly Spending',
+                  data: Object.values(monthly),
+                  backgroundColor: '#10b981'
+                }]
+              },
+              options: {
+                indexAxis: 'y',
+                responsive: true,
+                scales: { x: { beginAtZero: true } }
+              }
+            });
+          }
+
+          // ---------- Chart 6: Polar (Category Share) ----------
+          if (polarRef.current) {
+            const ctx = polarRef.current.getContext('2d');
+            polarRef.current.chartInstance = new Chart(ctx, {
+              type: 'polarArea',
+              data: {
+                labels: Object.keys(cats),
+                datasets: [{
+                  label: 'Category Share',
+                  data: Object.values(cats),
+                  backgroundColor: [
+                    '#6366f1','#22c55e','#f59e0b','#ef4444',
+                    '#8b5cf6','#14b8a6','#f97316','#84cc16'
+                  ]
+                }]
+              },
+              options: { responsive: true, plugins: { legend: { position: 'right' } } }
+            });
+          }
+        }, [expenses]);
+
+        return (
+          <div className="p-6 space-y-8">
+            <h2 className="text-2xl font-bold text-center text-gray-800">Spending Analytics Dashboard</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Daily Spending Trend</h3>
+
+                {/* ✅ Fixed height for chart */}
+                <div className="h-[200px] mb-1">
+                  <canvas ref={lineRef} className="w-full h-full"></canvas>
+                </div>
+
+                <div className="overflow-y-auto max-h-[180px] border-t border-gray-200 pt-1">
+
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {Object.entries(dailyTotals).map(([date, amount]) => (
+                        <tr key={date} className="border-b last:border-none">
+                          <td className="py-2 text-gray-500">
+                            {new Date(date).toLocaleDateString()}
+                          </td>
+                          <td className="py-2 text-right font-semibold text-gray-800">
+                            ₹{amount.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Category Distribution</h3>
+                <canvas ref={radarRef}></canvas>
+              </div>
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Average Daily Spend</h3>
+                <canvas ref={barRef}></canvas>
+
+                {/* Summary */}
+                <div className="mt-4 grid grid-cols-2 gap-2 text-sm text-gray-700">
+                  {avgCat.map((c) => (
+                    <div key={c.cat} className="flex justify-between border-b border-gray-100 pb-1">
+                      <span>{c.cat}</span>
+                      <span className="font-semibold">₹{c.avg.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Top 5 Categories</h3>
+                <canvas ref={doughnutRef}></canvas>
+              </div>
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Monthly Spending Trend</h3>
+                <canvas ref={monthRef}></canvas>
+
+                {/* Summary */}
+                <div className="mt-4 space-y-1 text-sm text-gray-700">
+                  {Object.entries(monthlyTotals).map(([month, total]) => (
+                    <div key={month} className="flex justify-between border-b border-gray-100 pb-1">
+                      <span>{month}</span>
+                      <span className="font-semibold">₹{total.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Category Share (Polar)</h3>
+                <canvas ref={polarRef}></canvas>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+ 
+      
+
+
+      const FinanceHubPage = ({ expenses, userEmail, token }) => {
+        const [assets, setAssets] = React.useState([{ name: 'Cash', amount: 0 }]);
+        const [liabs, setLiabs] = React.useState([{ name: 'Credit Card', amount: 0 }]);
+        const [history, setHistory] = React.useState([]);
+        const [incomes, setIncomes] = React.useState([{ name: 'Salary', amount: 0 }]);
+        const lineRef = React.useRef(null);
+        const barRef = useRef(null); 
+
+        // ✅ Load saved finance data from backend
+        React.useEffect(() => {
+          const fetchFinance = async () => {
+            try {
+              const res = await fetch(`${API_URL}/api/finance`, {
+                headers: {
+                  "Authorization": `Bearer ${token}`,
+                },
+              });
+              if (res.ok) {
+                const data = await res.json();
+                setAssets(data.assets || []);
+                setLiabs(data.liabilities || []);
+                setHistory(data.snapshots || []);
+              }
+            } catch (err) {
+              console.error("Error loading finance data:", err);
+            }
+          };
+          if (token) fetchFinance();
+        }, [token]);
+
+
+        // ======== Monthly Summary Logic ========
+        const now = new Date();
+        const sameMonth = (d) => {
+          const dt = new Date(d);
+          return dt.getMonth() === now.getMonth() && dt.getFullYear() === now.getFullYear();
+        };
+
+        const monthItems = (expenses || []).filter(e => sameMonth(e.created_at));
+        const isIncome = (e) => e.category?.toLowerCase() === 'income';
+
+        const totalIncome = incomes.reduce((s, x) => s + Number(x.amount || 0), 0);
+        const totalExpenses = monthItems.filter(e => !isIncome(e)).reduce((s, e) => s + Number(e.amount || 0), 0);
+        const savings = totalIncome - totalExpenses;
+
+        const byCat = {};
+        monthItems.filter(e => !isIncome(e)).forEach(e => {
+          byCat[e.category] = (byCat[e.category] || 0) + Number(e.amount);
+        });
+        const top3 = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 3);
+
+        // ======== Net Worth Logic ========
+        const sum = (arr) => arr.reduce((s, x) => s + Number(x.amount || 0), 0);
+        const totalAssets = sum(assets);
+        const totalLiabs = sum(liabs);
+        const netWorth = totalAssets - totalLiabs;
+
+        const addRow = (type) => {
+          if (type === 'asset') setAssets(a => [...a, { name: '', amount: 0 }]);
+          else setLiabs(l => [...l, { name: '', amount: 0 }]);
+        };
+
+        const changeRow = (type, i, field, value) => {
+          const norm = field === 'amount' ? Number(value) : value;
+          if (type === 'asset') setAssets(a => a.map((r, idx) => idx === i ? { ...r, [field]: norm } : r));
+          else setLiabs(l => l.map((r, idx) => idx === i ? { ...r, [field]: norm } : r));
+        };
+
+        const saveSnapshot = async () => {
+        const entry = { date: new Date().toISOString(), value: netWorth };
+        const updatedHistory = [...history, entry];
+
+        setHistory(updatedHistory);
+
+        try {
+          const res = await fetch(`${API_URL}/api/finance`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              assets,
+              liabilities: liabs,
+              snapshots: updatedHistory,
+            }),
+          });
+          if (res.ok) {
+            console.log("✅ Finance data saved successfully");
+          } else {
+            console.error("❌ Failed to save finance data");
+          }
+        } catch (err) {
+          console.error("Error saving finance data:", err);
+        }
+      };
+
+
+        React.useEffect(() => {
+          if (!lineRef.current) return;
+          if (lineRef.current.chartInstance) lineRef.current.chartInstance.destroy();
+
+          const ctx = lineRef.current.getContext("2d");
+          const chart = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: history.map(h => new Date(h.date).toLocaleDateString()),
+              datasets: [{
+                label: "Net Worth (₹)",
+                data: history.map(h => h.value),
+                borderColor: "#4F46E5",
+                backgroundColor: "rgba(79,70,229,0.1)",
+                tension: 0.3,
+                fill: true
+              }]
+            },
+            options: { responsive: true, plugins: { legend: { position: "top" } } }
+          });
+          lineRef.current.chartInstance = chart;
+        }, [history]);
+
+       if (barRef.current) {
+        const ctx = barRef.current.getContext("2d");
+        if (barRef.current.chartInstance) {
+          barRef.current.chartInstance.destroy();
+        }
+
+        const totalAssets = assets.reduce((s, x) => s + Number(x.amount || 0), 0);
+        const totalLiabs = liabs.reduce((s, x) => s + Number(x.amount || 0), 0);
+
+        const chart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["Assets", "Liabilities"],
+            datasets: [
+              {
+                label: "Total Value (₹)",
+                data: [totalAssets, totalLiabs],
+                backgroundColor: ["#10B981", "#EF4444"],
+                borderRadius: 8,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+            },
+            scales: {
+              y: { beginAtZero: true },
+            },
+          },
+        });
+
+        barRef.current.chartInstance = chart;
+      }
+
+
+
+        return (
+          <div className="p-6 space-y-8">
+            <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">Finance Hub</h2>
+
+            {/* Net Worth Section */}
+            <section className="bg-white p-6 rounded-xl shadow-lg">
+              <h3 className="text-2xl font-semibold mb-4">💰 Net Worth Tracker</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="bg-indigo-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Assets</div>
+                  <div className="text-2xl font-bold text-green-600">₹{totalAssets.toFixed(2)}</div>
+                </div>
+                <div className="bg-rose-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Liabilities</div>
+                  <div className="text-2xl font-bold text-red-600">₹{totalLiabs.toFixed(2)}</div>
+                </div>
+                <div className="bg-emerald-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Net Worth</div>
+                  <div className="text-2xl font-bold text-indigo-600">₹{netWorth.toFixed(2)}</div>
+                </div>
+              </div>
+
+
+
+
+              {/* Editable Assets & Liabilities */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Assets */}
+                  {/* Assets */}
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <h4 className="font-semibold">Assets</h4>
+                      <button
+                        onClick={() => addRow('asset')}
+                        className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 transition"
+                      >
+                        + Add
+                      </button>
+                    </div>
+
+                    {assets.map((a, i) => (
+                      <div key={i} className="flex gap-2 mb-2 items-center">
+                        <input
+                          value={a.name}
+                          onChange={(e) => changeRow('asset', i, 'name', e.target.value)}
+                          className="flex-1 border rounded px-2 py-1"
+                          placeholder="Asset Name"
+                        />
+                        <input
+                          value={a.amount}
+                          type="number"
+                          onChange={(e) => changeRow('asset', i, 'amount', e.target.value)}
+                          className="w-28 border rounded px-2 py-1"
+                          placeholder="Amount"
+                        />
+                        <button
+                          onClick={() => setAssets(assets.filter((_, idx) => idx !== i))}
+                          className="p-2 rounded-full bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-colors duration-200 shadow-sm"
+                          title="Delete Asset"
+                        >
+                          <TrashIcon />
+                        </button>
+
+
+                      </div>
+                    ))}
+                  </div>
+
+                {/* Liabilities */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-semibold">Liabilities</h4>
+                    <button onClick={() => addRow('liab')} className="bg-indigo-500 text-white px-2 py-1 rounded">+ Add</button>
+                  </div>
+                  {liabs.map((l, i) => (
+                    <div key={i} className="flex gap-2 mb-2 items-center">
+                      <input
+                        value={l.name}
+                        onChange={(e) => changeRow('liab', i, 'name', e.target.value)}
+                        className="flex-1 border rounded px-2 py-1"
+                        placeholder="Liability Name"
+                      />
+                      <input
+                        value={l.amount}
+                        type="number"
+                        onChange={(e) => changeRow('liab', i, 'amount', e.target.value)}
+                        className="w-28 border rounded px-2 py-1"
+                        placeholder="Amount"
+                      />
+                      <button
+                        onClick={() => setLiabs(liabs.filter((_, idx) => idx !== i))}
+                        className="p-2 rounded-full bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-colors duration-200 shadow-sm"
+                        title="Delete Liability"
+                      >
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Snapshot Section */}
+              <div className="mt-6">
+                <button
+                  onClick={saveSnapshot}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+                >
+                  Save Snapshot
+                </button>
+
+                {/* Flexbox Layout for Side-by-Side Charts */}
+                <div className="mt-6 flex flex-row flex-wrap gap-6">
+                  
+                  {/* Line Chart */}
+                  <div className="flex-1 min-w-[400px] h-[260px] bg-white rounded-xl p-4 shadow">
+                    <h4 className="text-center font-semibold mb-2">Net Worth (₹)</h4>
+                    <canvas ref={lineRef}></canvas>
+                  </div>
+
+                  {/* Bar Chart */}
+                  <div className="flex-1 min-w-[400px] h-[260px] bg-white rounded-xl p-4 shadow">
+                    <h4 className="text-center font-semibold mb-2">Assets vs Liabilities</h4>
+                    <canvas ref={barRef}></canvas>
+                  </div>
+
+                </div>
+              </div>
+
+            </section>
+
+            {/* Monthly Summary Section */}
+            <section className="bg-white p-6 rounded-xl shadow-lg">
+              <h3 className="text-2xl font-semibold mb-4">📅 Monthly Summary</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="bg-indigo-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Total Income</div>
+                  <div className="text-2xl font-bold text-green-600">₹{totalIncome.toFixed(2)}</div>
+                </div>
+                <div className="bg-rose-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Total Expenses</div>
+                  <div className="text-2xl font-bold text-red-600">₹{totalExpenses.toFixed(2)}</div>
+                </div>
+                <div className="bg-emerald-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Savings</div>
+                  <div className="text-2xl font-bold text-indigo-600">₹{savings.toFixed(2)}</div>
+                </div>
+              </div>
+
+              <h4 className="text-lg font-semibold mb-2">Top 3 Categories</h4>
+              {top3.length > 0 ? (
+                <ul className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {top3.map(([cat, amt]) => (
+                    <li key={cat} className="bg-gray-50 p-3 rounded-lg text-center">
+                      <div className="font-semibold">{cat}</div>
+                      <div className="text-indigo-600 font-bold">₹{amt.toFixed(2)}</div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500">No expenses this month yet.</p>
+              )}
+                            {/* Incomes */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-2">
+                  <h4 className="font-semibold">Incomes</h4>
+                  <button
+                    onClick={() => setIncomes([...incomes, { name: '', amount: 0 }])}
+                    className="bg-indigo-500 text-white px-2 py-1 rounded hover:bg-indigo-600 transition"
+                  >
+                    + Add
+                  </button>
+                </div>
+
+                {incomes.map((inc, i) => (
+                  <div key={i} className="flex gap-2 mb-2 items-center">
+                    <input
+                      value={inc.name}
+                      onChange={(e) => {
+                        const updated = [...incomes];
+                        updated[i].name = e.target.value;
+                        setIncomes(updated);
+                      }}
+                      className="flex-1 border rounded px-2 py-1"
+                      placeholder="Income Source"
+                    />
+                    <input
+                      type="number"
+                      value={inc.amount}
+                      onChange={(e) => {
+                        const updated = [...incomes];
+                        updated[i].amount = Number(e.target.value);
+                        setIncomes(updated);
+                      }}
+                      className="w-28 border rounded px-2 py-1"
+                      placeholder="Amount"
+                    />
+                    <button
+                      onClick={() => setIncomes(incomes.filter((_, idx) => idx !== i))}
+                      className="p-2 rounded-full bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 transition-colors duration-200 shadow-sm"
+                      title="Delete Income"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+
+            </section>
+
+            
+
+            
+          </div>
+        );
+      };
+
+      const EMILoansPage = ({ apiClient, token, userEmail }) => {
+        const [emis, setEmis] = React.useState([]);
+        const [loans, setLoans] = React.useState([]);
+        const [dueSoon, setDueSoon] = React.useState([]);
+        const [showPopup, setShowPopup] = React.useState(true);
+
+        // Form state
+        const [emiForm, setEmiForm] = React.useState({ title: "", description: "", amount: "", due_date: "" });
+        const [loanForm, setLoanForm] = React.useState({ title: "", description: "", principal: "", interest_rate: "", start_date: "", tenure_months: "" });
+
+        const loadAll = async () => {
+          const [r1, r2, r3] = await Promise.all([
+            apiClient("/api/emis"),
+            apiClient("/api/loans"),
+            apiClient("/api/emis/due_soon")
+          ]);
+          if (r1.ok) setEmis(await r1.json());
+          if (r2.ok) setLoans(await r2.json());
+          if (r3.ok) setDueSoon(await r3.json());
+        };
+
+        React.useEffect(() => { if (token) loadAll(); }, [token]);
+
+        const createEMI = async (e) => {
+          e.preventDefault();
+          const payload = { ...emiForm, amount: Number(emiForm.amount) };
+          const r = await apiClient("/api/emis", "POST", payload);
+          if (r.ok) { setEmiForm({ title:"", description:"", amount:"", due_date:"" }); loadAll(); }
+        };
+        const deleteEMI = async (id) => { const r = await apiClient(`/api/emis/${id}`, "DELETE"); if (r.ok) loadAll(); };
+
+        const createLoan = async (e) => {
+          e.preventDefault();
+          const payload = {
+            ...loanForm,
+            principal: Number(loanForm.principal),
+            interest_rate: Number(loanForm.interest_rate),
+            tenure_months: Number(loanForm.tenure_months)
+          };
+          const r = await apiClient("/api/loans", "POST", payload);
+          if (r.ok) { setLoanForm({ title:"", description:"", principal:"", interest_rate:"", start_date:"", tenure_months:"" }); loadAll(); }
+        };
+        const deleteLoan = async (id) => { const r = await apiClient(`/api/loans/${id}`, "DELETE"); if (r.ok) loadAll(); };
+
+        const dd = (iso) => new Date(iso);
+        const daysLeft = (iso) => Math.ceil((dd(iso) - new Date()) / (1000*60*60*24));
+
+        const sendTestEmail = async () => {
+          if (!userEmail) { alert("No user email found."); return; }
+          const r = await apiClient("/api/emis/send_due_emails", "POST", { email: userEmail });
+          if (r.ok) alert("Triggered reminder emails (if any due in exactly 3 days).");
+        };
+
+        return (
+          <div className="p-6 space-y-8">
+            <h2 className="text-2xl font-bold text-gray-800">💳 EMIs & Loans</h2>
+
+            {/* --- Popup reminder if any due in next 3 days --- */}
+            {showPopup && dueSoon.length > 0 && (
+              <div className="bg-yellow-100 border border-yellow-300 text-yellow-900 px-4 py-3 rounded-xl relative shadow">
+                <button className="absolute right-3 top-3 text-yellow-800" onClick={() => setShowPopup(false)}>✕</button>
+                <div className="font-semibold mb-1">Upcoming EMIs (within 3 days)</div>
+                <ul className="list-disc ml-5">
+                  {dueSoon.map(x => (
+                    <li key={x.id}>
+                      <span className="font-medium">{x.title}</span> — ₹{x.amount.toFixed(2)} due on {new Date(x.due_date).toLocaleDateString()} ({daysLeft(x.due_date)} days left)
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* --- EMI Form --- */}
+            <section className="bg-white p-6 rounded-xl shadow-lg">
+              <h3 className="text-xl font-semibold mb-4">Add EMI</h3>
+              <form onSubmit={createEMI} className="grid md:grid-cols-4 gap-3">
+                <input className="border rounded px-3 py-2" placeholder="Title" value={emiForm.title} onChange={e=>setEmiForm({...emiForm, title:e.target.value})}/>
+                <input className="border rounded px-3 py-2" placeholder="Description" value={emiForm.description} onChange={e=>setEmiForm({...emiForm, description:e.target.value})}/>
+                <input type="number" className="border rounded px-3 py-2" placeholder="Amount (₹)" value={emiForm.amount} onChange={e=>setEmiForm({...emiForm, amount:e.target.value})}/>
+                <input type="datetime-local" className="border rounded px-3 py-2" value={emiForm.due_date} onChange={e=>setEmiForm({...emiForm, due_date:e.target.value})}/>
+                <button className="md:col-span-4 bg-indigo-600 text-white rounded px-4 py-2 hover:bg-indigo-700">Save EMI</button>
+              </form>
+
+              {/* EMI List */}
+              <div className="mt-6 grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {emis.map(x => {
+                  const days = daysLeft(x.due_date);
+                  const isDueSoon = days <= 3;
+                  const isOverdue = days < 0;
+
+                  return (
+                    <div
+                      key={x.id}
+                      className={`relative overflow-hidden p-5 rounded-2xl shadow-lg transform transition-all duration-500 hover:scale-105 hover:shadow-2xl
+                        ${isDueSoon
+                          ? "bg-gradient-to-br from-rose-600 via-red-500 to-rose-400 text-white"
+                          : "bg-gradient-to-br from-emerald-500 via-green-500 to-emerald-400 text-white"
+                        }`}
+                    >
+                      {/* Animated gradient overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent animate-pulse pointer-events-none rounded-2xl"></div>
+
+                      <div className="flex justify-between items-start relative z-10">
+                        <div>
+                          <div className="text-lg font-semibold capitalize">{x.title}</div>
+                          <div className="text-sm text-green-100/90">{x.description || "—"}</div>
+                        </div>
+                        <button
+                          className="text-sm font-medium text-white hover:text-yellow-200 transition-colors"
+                          onClick={() => deleteEMI(x.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+
+                      <div className="mt-3 text-sm relative z-10">
+                        <div>
+                          Amount: <span className="font-bold text-yellow-200">₹{x.amount.toFixed(2)}</span>
+                        </div>
+                        <div className="mt-1">
+                          Due: {new Date(x.due_date).toLocaleString()}{" "}
+                          <span className="mx-2 text-lg text-gray-200">•</span>
+                          <span
+                            className={`font-semibold px-2 py-0.5 rounded ${
+                              isOverdue
+                                ? "bg-yellow-300 text-black animate-pulse"
+                                : isDueSoon
+                                ? "bg-red-200 text-red-800 animate-pulse"
+                                : "bg-green-200 text-green-800"
+                            }`}
+                          >
+                            {days} {Math.abs(days) === 1 ? "day" : "days"} left
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Subtle floating gradient shimmer */}
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent animate-gradient-move"></div>
+                    </div>
+                  );
+                })}
+
+
+              </div>
+            </section>
+
+            {/* --- Loans Form --- */}
+            <section className="bg-white p-6 rounded-xl shadow-lg">
+              <h3 className="text-xl font-semibold mb-4">Add Loan and calculate you EMI</h3>
+              <form onSubmit={createLoan} className="grid md:grid-cols-3 gap-3">
+                <input className="border rounded px-3 py-2" placeholder="Loan Title" value={loanForm.title} onChange={e=>setLoanForm({...loanForm, title:e.target.value})}/>
+                <input className="border rounded px-3 py-2" placeholder="Description" value={loanForm.description} onChange={e=>setLoanForm({...loanForm, description:e.target.value})}/>
+                <input type="number" className="border rounded px-3 py-2" placeholder="Loan Amount (₹)" value={loanForm.principal} onChange={e=>setLoanForm({...loanForm, principal:e.target.value})}/>
+                <input type="number" step="0.01" className="border rounded px-3 py-2" placeholder="Interest % (annual)" value={loanForm.interest_rate} onChange={e=>setLoanForm({...loanForm, interest_rate:e.target.value})}/>
+                <input type="date" className="border rounded px-3 py-2" value={loanForm.start_date} onChange={e=>setLoanForm({...loanForm, start_date:e.target.value})}/>
+                <input type="number" className="border rounded px-3 py-2" placeholder="Tenure (months)" value={loanForm.tenure_months} onChange={e=>setLoanForm({...loanForm, tenure_months:e.target.value})}/>
+                <button className="md:col-span-3 bg-indigo-600 text-white rounded px-4 py-2 hover:bg-indigo-700">Save Loan</button>
+              </form>
+
+              {/* Loans List */}
+              <div className="mt-6 grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {loans.map(x => {
+                  // Simple "loan status" logic based on start date proximity
+                  const start = new Date(x.start_date);
+                  const today = new Date();
+                  const daysSinceStart = Math.floor((today - start) / (1000 * 60 * 60 * 24));
+                  const isRecent = daysSinceStart <= 30; // highlight new loans for 1 month
+
+                  return (
+                    <div
+                      key={x.id}
+                      className={`relative overflow-hidden p-5 rounded-2xl shadow-lg transform transition-all duration-500 hover:scale-105 hover:shadow-2xl
+                        ${isRecent
+                          ? "bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 text-white"
+                          : "bg-gradient-to-br from-sky-600 via-blue-500 to-indigo-400 text-white"
+                        }`}
+                    >
+                      {/* Animated shimmer overlay */}
+                      <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent animate-pulse pointer-events-none rounded-2xl"></div>
+
+                      <div className="flex justify-between items-start relative z-10">
+                        <div>
+                          <div className="text-lg font-semibold capitalize">{x.title}</div>
+                          <div className="text-sm text-blue-100/90">{x.description || "—"}</div>
+                        </div>
+                        <button
+                          className="text-sm font-medium text-white hover:text-yellow-200 transition-colors"
+                          onClick={() => deleteLoan(x.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+
+                      <div className="mt-3 text-sm relative z-10">
+                        <div>
+                          Principal: <span className="font-bold text-yellow-200">₹{x.principal.toFixed(2)}</span>
+                        </div>
+                        <div className="mt-1">
+                          Interest: <span className="font-semibold">{x.interest_rate}%</span> • Tenure: {x.tenure_months} mo
+                        </div>
+                        <div className="mt-1">
+                          Start: {new Date(x.start_date).toLocaleDateString()}
+                        </div>
+                        <div className="mt-2">
+                          Calculated EMI:{" "}
+                          <span className="font-bold text-white bg-blue-800/30 px-2 py-1 rounded">
+                            ₹{x.emi_amount.toFixed(2)} / month
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Subtle floating shimmer */}
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/5 to-transparent animate-gradient-move"></div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-4">
+                <button onClick={sendTestEmail} className="text-indigo-600 hover:text-indigo-800 underline text-sm">
+                  Send test email (due in exactly 3 days)
+                </button>
+              </div>
+            </section>
+          </div>
+        );
+      };
+
+
+      // ✅ StocksPage.js (inside index.html)
+      const StocksPage = ({ apiClient, token, onSelectStock }) => {
+        const { useEffect, useRef, useState } = React;
+
+        // ---- state
+        const [q, setQ] = useState("");
+        const [suggestions, setSuggestions] = useState([]);
+        const [selected, setSelected] = useState(null);  // {symbol,name}
+        const [quote, setQuote] = useState(null);        // {price, change, status}
+        const [rangeKey, setRangeKey] = useState("1mo"); // "1d" | "1w" | "1mo"
+        const [history, setHistory] = useState([]);      // [{t,c}]
+        const [watchlist, setWatchlist] = useState([]);
+        const [positions, setPositions] = useState([]);
+        const [portfolio, setPortfolio] = useState({
+          positions: [],
+          totals: { invested: 0, value: 0, pl: 0, pl_pct: 0 },
+        });
+
+        const [qty, setQty] = useState("");
+        const [avgPrice, setAvgPrice] = useState("");
+
+        const chartRef = useRef(null);
+        const chartInstanceRef = useRef(null);
+
+        // ---- global setter (optional)
+        useEffect(() => {
+          window.setView = (v) => {
+            const evt = new CustomEvent("setView", { detail: v });
+            window.dispatchEvent(evt);
+          };
+        }, []);
+
+        // ---- debounced search
+        useEffect(() => {
+          if (!q) {
+            setSuggestions([]);
+            return;
+          }
+          const id = setTimeout(async () => {
+            const res = await apiClient(`/api/invest/search?q=${encodeURIComponent(q)}`);
+            if (res.ok) setSuggestions(await res.json());
+          }, 250);
+          return () => clearTimeout(id);
+        }, [q]);
+
+        // ---- load quote & history
+        const loadSymbol = async (sym, name) => {
+          // 📡 call parent to switch page
+          if (onSelectStock) onSelectStock({ symbol: sym, name });
+        };
+
+
+        const loadQuote = async (sym) => {
+          try {
+            const r = await apiClient(`/api/invest/quote/${sym}`);
+            const data = await r.json();
+            if (!r.ok || !data || data.error || !data.price) {
+              alert(`⚠️ No data available for ${sym}. Try another stock.`);
+              setQuote(null);
+              return;
+            }
+            setQuote(data);
+          } catch (err) {
+            console.error("Quote fetch failed:", err);
+            alert("Failed to fetch quote. Please try again later.");
+            setQuote(null);
+          }
+        };
+
+        const loadHistory = async (sym, rk) => {
+          const r = await apiClient(`/api/invest/history/${sym}?range=${rk}`);
+          if (r.ok) {
+            const data = await r.json();
+            setHistory(data.points || []);
+          }
+        };
+
+        // ---- draw chart
+        useEffect(() => {
+          if (!chartRef.current || history.length === 0) return;
+          if (chartInstanceRef.current) {
+            chartInstanceRef.current.destroy();
+            chartInstanceRef.current = null;
+          }
+          const ctx = chartRef.current.getContext("2d");
+          chartInstanceRef.current = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: history.map((p) => new Date(p.t)),
+              datasets: [
+                {
+                  label: selected ? `${selected.symbol} Close` : "Close",
+                  data: history.map((p) => p.c),
+                  borderColor: "#4F46E5",
+                  backgroundColor: "rgba(79,70,229,0.12)",
+                  tension: 0.35,
+                  fill: true,
+                  pointRadius: 0,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { type: "time", time: { unit: "day" } },
+                y: { ticks: { callback: (v) => `₹${v}` } },
+              },
+            },
+          });
+        }, [history, selected]);
+
+        // ---- watchlist
+        const loadWatchlist = async () => {
+          const res = await apiClient("/api/invest/watchlist/quotes");
+          if (res.ok) setWatchlist(await res.json());
+        };
+
+        const addToWatchlist = async () => {
+          if (!selected) return;
+          const r = await apiClient("/api/invest/watchlist", "POST", {
+            symbol: selected.symbol,
+            name: selected.name,
+          });
+          if (r.ok) await loadWatchlist();
+        };
+
+        const removeFromWatchlist = async (symbol) => {
+          const r = await apiClient(`/api/invest/watchlist/${symbol}`, "DELETE");
+          if (r.ok) await loadWatchlist();
+        };
+
+        // ---- positions / portfolio
+        const loadPositions = async () => {
+          const r = await apiClient("/api/invest/positions");
+          if (r.ok) setPositions(await r.json());
+        };
+
+        const upsertPosition = async () => {
+          if (!selected) return;
+          const payload = {
+            symbol: selected.symbol,
+            name: selected.name,
+            qty: Number(qty),
+            avg_price: Number(avgPrice),
+          };
+          const r = await apiClient("/api/invest/positions", "POST", payload);
+          if (r.ok) {
+            setQty("");
+            setAvgPrice("");
+            await Promise.all([loadPositions(), loadPortfolio()]);
+          }
+        };
+
+        const removePosition = async (symbol) => {
+          const r = await apiClient(`/api/invest/positions/${symbol}`, "DELETE");
+          if (r.ok) await Promise.all([loadPositions(), loadPortfolio()]);
+        };
+
+        const loadPortfolio = async () => {
+          const r = await apiClient("/api/invest/portfolio/summary");
+          if (r.ok) setPortfolio(await r.json());
+        };
+
+        // ---- initial data
+        useEffect(() => {
+          if (token) {
+            loadWatchlist();
+            loadPositions();
+            loadPortfolio();
+          }
+        }, [token]);
+
+        // ---- range change reload
+        useEffect(() => {
+          if (selected) loadHistory(selected.symbol, rangeKey);
+        }, [rangeKey]);
+
+        // ✅ RETURN JSX
+        return (
+          <div className="p-6 space-y-8">
+            <h2 className="text-2xl font-bold text-gray-800">📈 Stocks</h2>
+
+            {/* Search + Suggestions */}
+            <div className="relative max-w-2xl">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search by company or symbol (e.g., Reliance or RELIANCE.NS)"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              {suggestions.length > 0 && (
+                <div className="absolute z-10 mt-2 w-full bg-white rounded-xl shadow-xl border max-h-80 overflow-y-auto">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.symbol}
+                      onClick={() => onSelectStock({ symbol: s.symbol, name: s.name })}
+                      className="block w-full text-left px-3 py-2 hover:bg-indigo-100"
+                    >
+                      {s.name} ({s.symbol})
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Selected Stock */}
+            {selected && (
+              <div className="bg-white p-5 rounded-xl shadow-lg space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-lg font-semibold">{selected.name}</div>
+                    <div className="text-sm text-gray-500">{selected.symbol}</div>
+                  </div>
+                  {quote ? (
+                    quote.price !== null ? (
+                      <div className="text-right">
+                        <div className="text-2xl font-extrabold">₹{quote.price}</div>
+                        <div
+                          className={
+                            quote.status === "up"
+                              ? "text-green-600"
+                              : quote.status === "down"
+                              ? "text-red-600"
+                              : "text-gray-600"
+                          }
+                        >
+                          {quote.change > 0 ? "▲" : quote.change < 0 ? "▼" : "—"} {quote.change}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-right text-gray-500 text-sm italic">
+                        ⚠️ No data available for {selected?.symbol}
+                      </div>
+                    )
+                  ) : null}
+                </div>
+
+                {/* Range Toggle */}
+                <div className="flex gap-2">
+                  {["1d", "1w", "1mo"].map((rk) => (
+                    <button
+                      key={rk}
+                      onClick={() => setRangeKey(rk)}
+                      className={`px-3 py-1.5 rounded-lg border ${
+                        rangeKey === rk
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      {rk.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Chart */}
+                <div className="mt-2">
+                  <canvas ref={chartRef} height="120"></canvas>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    onClick={addToWatchlist}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  >
+                    ⭐ Add to Watchlist
+                  </button>
+                  <button
+                    onClick={() => selected && loadSymbol(selected.symbol, selected.name)}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                  >
+                    Refresh
+                  </button>
+                </div>
+
+                {/* Quick add position */}
+                <div className="grid md:grid-cols-3 gap-3">
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.0001"
+                    value={qty}
+                    onChange={(e) => setQty(e.target.value)}
+                    placeholder="Qty"
+                    className="px-3 py-2 border rounded-lg"
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={avgPrice}
+                    onChange={(e) => setAvgPrice(e.target.value)}
+                    placeholder="Avg Price (₹)"
+                    className="px-3 py-2 border rounded-lg"
+                  />
+                  <button
+                    onClick={upsertPosition}
+                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                  >
+                    Save Position
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Watchlist */}
+            <div>
+              <h3 className="text-xl font-semibold mb-3">⭐ Watchlist</h3>
+              {watchlist.length === 0 ? (
+                <p className="text-gray-500">No symbols yet. Search above and add some.</p>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {watchlist.map((item) => (
+                    <div key={item.symbol} className="bg-white p-4 rounded-xl shadow">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-semibold">{item.name}</div>
+                          <div className="text-xs text-gray-500">{item.symbol}</div>
+                        </div>
+                        <button
+                          className="text-red-600 hover:text-red-800"
+                          onClick={() => removeFromWatchlist(item.symbol)}
+                          title="Remove"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                      <div className="mt-2 flex items-baseline justify-between">
+                        <div className="text-xl font-bold">₹{item.price}</div>
+                        <div
+                          className={
+                            item.status === "up"
+                              ? "text-green-600"
+                              : item.status === "down"
+                              ? "text-red-600"
+                              : "text-gray-600"
+                          }
+                        >
+                          {item.change > 0 ? "▲" : item.change < 0 ? "▼" : "—"} {item.change}
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <button
+                          className="text-indigo-600 hover:text-indigo-800 text-sm"
+                          onClick={() => onSelectStock({ symbol: item.symbol, name: item.name })}
+                        >
+                          View chart
+                        </button>
+
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Portfolio */}
+            <div className="bg-white p-5 rounded-xl shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold">💼 Portfolio</h3>
+                <div className="text-sm text-gray-500">
+                  Auto-calculated using your saved positions
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-600">
+                      <th className="py-2">Symbol</th>
+                      <th className="py-2">Qty</th>
+                      <th className="py-2">Avg Price</th>
+                      <th className="py-2">LTP</th>
+                      <th className="py-2">Invested</th>
+                      <th className="py-2">Value</th>
+                      <th className="py-2">P&L</th>
+                      <th className="py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {portfolio.positions.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" className="py-3 text-gray-500">
+                          No positions yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      portfolio.positions.map((p) => (
+                        <tr key={p.symbol} className="border-t">
+                          <td className="py-2">
+                            {p.name}{" "}
+                            <span className="text-gray-500 text-xs">({p.symbol})</span>
+                          </td>
+                          <td className="py-2">{p.qty}</td>
+                          <td className="py-2">₹{p.avg_price}</td>
+                          <td className="py-2">₹{p.ltp}</td>
+                          <td className="py-2">₹{p.invested}</td>
+                          <td className="py-2">₹{p.value}</td>
+                          <td
+                            className={`py-2 ${
+                              p.pl >= 0 ? "text-green-700" : "text-red-700"
+                            }`}
+                          >
+                            ₹{p.pl} ({p.pl_pct}%)
+                          </td>
+                          <td className="py-2">
+                            <button
+                              className="text-red-600 hover:text-red-800"
+                              onClick={() => removePosition(p.symbol)}
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Totals */}
+              <div className="mt-4 grid sm:grid-cols-3 gap-3">
+                <div className="p-3 rounded-lg bg-gray-50">
+                  <div className="text-xs text-gray-500">Invested</div>
+                  <div className="text-lg font-semibold">
+                    ₹{portfolio.totals.invested}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-gray-50">
+                  <div className="text-xs text-gray-500">Current Value</div>
+                  <div className="text-lg font-semibold">
+                    ₹{portfolio.totals.value}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-gray-50">
+                  <div className="text-xs text-gray-500">P&L</div>
+                  <div
+                    className={`text-lg font-semibold ${
+                      portfolio.totals.pl >= 0 ? "text-green-700" : "text-red-700"
+                    }`}
+                  >
+                    ₹{portfolio.totals.pl} ({portfolio.totals.pl_pct}%)
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      // ✅ StockDetails Component (place below StocksPage)
+      const StockDetails = ({ selectedStock, token, onBack }) => {
+        const [quote, setQuote] = React.useState(null);
+        const [history, setHistory] = React.useState([]);
+        const chartRef = React.useRef(null);
+
+        const API_URL = "http://127.0.0.1:5000";
+
+        // 🔄 Fetch quote & history when stock changes
+        React.useEffect(() => {
+          if (!selectedStock) return;
+
+          const fetchData = async () => {
+            try {
+              // 🎯 Fetch quote
+              const res1 = await fetch(`${API_URL}/api/invest/quote/${selectedStock.symbol}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const data1 = await res1.json();
+              setQuote(data1);
+
+              // 📈 Fetch 1-month history
+              const res2 = await fetch(
+                `${API_URL}/api/invest/history/${selectedStock.symbol}?range=1mo`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              const data2 = await res2.json();
+              setHistory(data2.points || []);
+            } catch (err) {
+              console.error("Failed to load stock data", err);
+            }
+          };
+          fetchData();
+        }, [selectedStock]);
+
+        // 🎨 Render Chart when history updates
+        React.useEffect(() => {
+          if (!chartRef.current || history.length === 0) return;
+          if (chartRef.current.chartInstance) chartRef.current.chartInstance.destroy();
+
+          const ctx = chartRef.current.getContext("2d");
+          const chart = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: history.map((p) => new Date(p.t).toLocaleDateString()),
+              datasets: [
+                {
+                  label: `${selectedStock.name} (${selectedStock.symbol})`,
+                  data: history.map((p) => p.c),
+                  borderColor: "#4F46E5",
+                  backgroundColor: "rgba(79,70,229,0.1)",
+                  fill: true,
+                  tension: 0.3,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              plugins: { legend: { position: "top" } },
+              scales: {
+                x: { title: { display: true, text: "Date" } },
+                y: {
+                  title: { display: true, text: "Price (₹)" },
+                  ticks: { callback: (v) => `₹${v}` },
+                },
+              },
+            },
+          });
+          chartRef.current.chartInstance = chart;
+        }, [history]);
+
+        // ⭐ Add to Watchlist
+        const handleAddWatchlist = async () => {
+          try {
+            const res = await fetch(`${API_URL}/api/invest/watchlist`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+              },
+              body: JSON.stringify(selectedStock),
+            });
+            if (res.ok) {
+              alert(`${selectedStock.name} added to Watchlist ✅`);
+            } else {
+              alert("Failed to add to Watchlist ⚠️");
+            }
+          } catch (err) {
+            console.error("Failed to add to watchlist", err);
+          }
+        };
+
+        // ✅ UI
+        return (
+          <div className="p-6 space-y-6 bg-gray-50 rounded-xl shadow-inner">
+            {/* 🔙 Back Button */}
+            <button
+              onClick={onBack}
+              className="text-indigo-600 font-semibold hover:underline"
+            >
+              &larr; Back
+            </button>
+
+            {/* 🏷️ Header */}
+            <h2 className="text-2xl font-bold text-center">
+              {selectedStock.name} ({selectedStock.symbol})
+            </h2>
+
+            {/* 💰 Quote Section */}
+            {quote ? (
+              <div className="flex justify-center space-x-8 items-center text-lg">
+                <div>
+                  <span className="font-semibold">Price:</span> ₹
+                  {quote.price?.toFixed(2) || "N/A"}
+                </div>
+                <div
+                  className={
+                    quote.status === "up"
+                      ? "text-green-600"
+                      : quote.status === "down"
+                      ? "text-red-600"
+                      : "text-gray-600"
+                  }
+                >
+                  {quote.change > 0 ? "▲" : quote.change < 0 ? "▼" : "—"}{" "}
+                  {quote.change?.toFixed(2)} ({quote.status})
+                </div>
+              </div>
+            ) : (
+              <p className="text-center text-gray-500">Loading quote...</p>
+            )}
+
+            {/* 📈 Chart */}
+            <div className="bg-white p-4 rounded-xl shadow-lg">
+              {history.length > 0 ? (
+                <canvas ref={chartRef}></canvas>
+              ) : (
+                <p className="text-center text-gray-500">Loading chart...</p>
+              )}
+            </div>
+
+            {/* ⭐ Add to Watchlist */}
+            <div className="text-center">
+              <button
+                onClick={handleAddWatchlist}
+                className="bg-indigo-600 text-white px-6 py-2 rounded-lg shadow hover:bg-indigo-700 transition-all"
+              >
+                + Add to Watchlist
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+
+
+      // --- Main App Component ---
+      const App = () => {
+        const [isLoggedIn, setIsLoggedIn] = useState(false);
+        const [token, setToken] = useState(null);
+        const [currentView, setCurrentView] = useState('Dashboard');
+        const [expenses, setExpenses] = useState([]);
+        const [editingExpense, setEditingExpense] = useState(null);
+        const [showGoalsModal, setShowGoalsModal] = useState(false);
+        const [userEmail, setUserEmail] = React.useState("");
+        const [selectedStock, setSelectedStock] = React.useState(null);
+
+
+        const [spendingGoals, setSpendingGoals] = useState({
+            'Food': 5000,
+            'Travel': 3000,
+            'Shopping': 2000,
+            'Bills': 7000,
+            'Rent': 15000,
+            'Entertainment': 2500,
+            'Health': 1000,
+            'Groceries': 4000,
+            'Education': 6000,
+            'Other': 1000
+        });
+        
+          useEffect(() => {
+            const savedToken = localStorage.getItem("token");
+            const savedEmail = localStorage.getItem("email");
+
+            if (savedToken && savedEmail) {
+              setToken(savedToken);
+              setUserEmail(savedEmail);
+              setIsLoggedIn(true);
+              setCurrentView("Dashboard");
+            }
+          }, []);
+
+          // ✅ Load saved goals from localStorage on startup
+          useEffect(() => {
+            const savedGoals = localStorage.getItem("spendingGoals");
+            if (savedGoals) {
+              setSpendingGoals(JSON.parse(savedGoals));
+            }
+          }, []);
+
+
+        const onCancelEdit = () => {
+            setEditingExpense(null);
+            setCurrentView('Dashboard');
+        };
+
+        // A helper function to make authenticated API requests
+        const apiClient = async (path, method = 'GET', data = null) => {
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+
+          const options = {
+            method,
+            headers,
+            body: data ? JSON.stringify(data) : null,
+          };
+
+          const response = await fetch(`${API_URL}${path}`, options);
+          return response;
+        };
+
+        const fetchExpenses = async () => {
+          try {
+            const response = await apiClient('/api/expenses');
+            if (response.ok) {
+              const data = await response.json();
+              // Map backend fields to frontend format
+              const formattedExpenses = data.map(exp => {
+                // Normalize UTC timestamps to local before sorting/display
+                const localDate = new Date(exp.created_at);
+                return {
+                  id: exp.id,
+                  amount: exp.amount,
+                  description: exp.note,
+                  category: exp.category,
+                  created_at: localDate.toISOString(),  // ✅ store normalized ISO
+                  date: localDate.toLocaleDateString(), // ✅ human readable
+                };
+              });
+
+              // ✅ Sort by created_at descending (newest → oldest)
+              formattedExpenses.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+              setExpenses(formattedExpenses);
+
+
+            } else {
+              console.error('Failed to fetch expenses:', await response.json());
+            }
+          } catch (error) {
+            console.error('Error fetching expenses:', error);
+          }
+        };
+
+        // Effect to fetch expenses after login
+        useEffect(() => {
+          if (token) {
+            fetchExpenses();
+          }
+        }, [token]);
+
+        const handleLogin = (jwtToken, userMail) => {
+          setToken(jwtToken);
+          setUserEmail(userMail);
+          setIsLoggedIn(true);
+          setCurrentView('Dashboard');
+
+          // ✅ Save in localStorage (so we persist after refresh)
+          localStorage.setItem("token", jwtToken);
+          localStorage.setItem("email", userMail);
+        };
+
+        const handleLogout = () => {
+          setIsLoggedIn(false);
+          setToken(null);
+          setExpenses([]);
+          setCurrentView('Login');
+
+            // ✅ clear localStorage so session doesn't persist
+            localStorage.removeItem("token");
+            localStorage.removeItem("email");
+        };
+
+        const handleAddExpense = async (newExpense) => {
+          try {
+            const response = await apiClient('/api/expenses', 'POST', newExpense);
+            if (response.ok) {
+              console.log("Expense added successfully!");
+              await fetchExpenses();
+
+              // ✅ If category not in spendingGoals, add it dynamically with default goal
+              setSpendingGoals(prev => {
+                if (!prev[newExpense.category]) {
+                  return { ...prev, [newExpense.category]: 1000 }; // default ₹1000 goal
+                }
+                return prev;
+              });
+
+              setCurrentView('Dashboard');
+            } else {
+              console.error('Failed to add expense:', await response.json());
+            }
+          } catch (error) {
+            console.error('Error adding expense:', error);
+          }
+        };
+
+        
+        const handleEditExpense = (expense) => {
+            setEditingExpense(expense);
+            setCurrentView('AddExpense');
+        };
+
+        const handleUpdateExpense = async (updatedExpense) => {
+            try {
+                const response = await apiClient(`/api/expenses/${updatedExpense.id}`, 'PATCH', {
+                    amount: updatedExpense.amount,
+                    note: updatedExpense.description,
+                    category: updatedExpense.category,
+                });
+                if (response.ok) {
+                    console.log("Expense updated successfully!");
+                    setEditingExpense(null);
+                    await fetchExpenses();
+                    setCurrentView('Dashboard');
+                } else {
+                    console.error('Failed to update expense:', await response.json());
+                }
+            } catch (error) {
+                console.error('Error updating expense:', error);
+            }
+        };
+
+        const handleDeleteExpense = async (id) => {
+            if (!confirm("Are you sure you want to delete this expense?")) {
+                return;
+            }
+            try {
+                const response = await apiClient(`/api/expenses/${id}`, 'DELETE');
+                if (response.ok) {
+                    console.log("Expense deleted successfully!");
+                    await fetchExpenses();
+                    setCurrentView('Dashboard');
+                } else {
+                    console.error('Failed to delete expense:', await response.json());
+                }
+            } catch (error) {
+                console.error('Error deleting expense:', error);
+            }
+        };
+        
+        const handleUpdateGoals = (newGoals) => {
+          setSpendingGoals(newGoals);
+          localStorage.setItem("spendingGoals", JSON.stringify(newGoals)); // ✅ save locally
+          console.log("✅ Goals saved to localStorage:", newGoals);
+        };
+
+        
+        const onOpenGoals = () => {
+            setShowGoalsModal(true);
+        };
+        
+        const onCloseGoals = () => {
+            setShowGoalsModal(false);
+        };
+
+      
+        const renderView = () => {
+          if (!isLoggedIn) {
+            return <Login onLogin={handleLogin} />;
+          }
+          return (
+            <div className="flex h-screen bg-gray-100">
+              <Sidebar onLogout={handleLogout} onViewChange={setCurrentView} currentView={currentView} onOpenGoals={onOpenGoals} />
+              <div className="flex-1 overflow-auto p-4 md:p-8">
+                {currentView === 'Dashboard' && (
+                  <Dashboard
+                    expenses={expenses}
+                    onEditExpense={handleEditExpense}
+                    onDeleteExpense={handleDeleteExpense}
+                    spendingGoals={spendingGoals}
+                    onUpdateGoals={handleUpdateGoals}
+                    userEmail={userEmail}
+                  />
+                )}
+
+                {currentView === 'AddExpense' && (
+                  <AddExpense
+                    onAddExpense={editingExpense ? handleUpdateExpense : handleAddExpense}
+                    editingExpense={editingExpense}
+                    onCancelEdit={onCancelEdit}
+                  />
+                )}
+
+                {currentView === 'FinanceHub' && (
+                  <FinanceHubPage expenses={expenses} userEmail={userEmail} token={token} />
+                )}
+
+                {currentView === 'Analytics' && <Analytics expenses={expenses} />}
+                {currentView === 'Summary' && <Summary expenses={expenses} />}
+
+                {showGoalsModal && (
+                  <SetGoalsModal
+                    goals={spendingGoals}
+                    onUpdateGoals={handleUpdateGoals}
+                    onClose={onCloseGoals}
+                  />
+                )}
+                {currentView === 'EMILoans' && (
+                  <EMILoansPage apiClient={apiClient} token={token} userEmail={userEmail}/>
+                )}
+
+
+                {/* 🧭 STOCKS: Toggle between List & Details */}
+                {currentView === 'Stocks' && (
+                  selectedStock ? (
+                    <StockDetails
+                      selectedStock={selectedStock}
+                      token={token}
+                      onBack={() => setSelectedStock(null)}
+                    />
+                  ) : (
+                    <StocksPage
+                      apiClient={apiClient}
+                      token={token}
+                      onSelectStock={(stock) => setSelectedStock(stock)}
+                    />
+                  )
+                )}
+              </div>
+            </div>
+          );
+        };
+
+        return (
+          <div className="font-sans antialiased bg-gray-100 min-h-screen">
+            {isLoggedIn ? renderView() : <Login onLogin={handleLogin} />}
+          </div>
+        );
+      };
+
+      ReactDOM.render(<App />, document.getElementById('root'));
+    }
+  </script>
+</body>
+</html>
