@@ -7,7 +7,7 @@ import os
 notification_bp = Blueprint('notification_bp', __name__)
 
 # Load environment variables
-RESEND_API_KEY = os.getenv("SENDGRID_API_KEY")
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 MAIL_SENDER = os.getenv("MAIL_SENDER", "mugilwork27@gmail.com")
 
 
@@ -53,16 +53,14 @@ def notify_goal_exceeded():
 
 def send_email(to_email, subject, body):
     """
-    Sends email using Resend API (HTTPS) instead of Gmail SMTP.
-    This works perfectly on Render, even on free plans.
+    Sends email using SendGrid API (Render-friendly, no SMTP required).
     """
-    api_key = RESEND_API_KEY
+    api_key = SENDGRID_API_KEY
     sender_email = MAIL_SENDER
 
     if not api_key:
-        raise Exception("Missing RESEND_API_KEY in environment variables")
+        raise Exception("Missing SENDGRID_API_KEY in environment variables")
 
-    # Preserve MIME format (optional; not required but consistent with your original structure)
     msg = MIMEText(body)
     msg["Subject"] = subject
     msg["From"] = sender_email
@@ -70,26 +68,28 @@ def send_email(to_email, subject, body):
 
     headers = {
         "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
     }
 
     payload = {
-        "from": f"Expense Tracker <{sender_email}>",
-        "to": [to_email],
+        "personalizations": [
+            {"to": [{"email": to_email}]}
+        ],
+        "from": {"email": sender_email, "name": "Expense Tracker"},
         "subject": subject,
-        "text": body,
+        "content": [{"type": "text/plain", "value": body}]
     }
 
-    print(f"📧 Sending email to {to_email} via Resend...", flush=True)
+    print(f"📧 Sending email to {to_email} via SendGrid...", flush=True)
 
     response = requests.post(
-        "https://api.resend.com/emails",
+        "https://api.sendgrid.com/v3/mail/send",
         headers=headers,
         json=payload,
         timeout=10
     )
 
-    if response.status_code not in (200, 201):
-        raise Exception(f"Resend API Error {response.status_code}: {response.text}")
+    if response.status_code != 202:
+        raise Exception(f"SendGrid API Error {response.status_code}: {response.text}")
 
-    print("✅ Email sent successfully through Resend!", flush=True)
+    print("✅ Email sent successfully through SendGrid!", flush=True)
