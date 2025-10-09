@@ -7,8 +7,8 @@ import os
 notification_bp = Blueprint('notification_bp', __name__)
 
 # Load environment variables
-RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-MAIL_SENDER = os.getenv("MAIL_SENDER", "no-reply@onresend.com")
+RESEND_API_KEY = os.getenv("SENDGRID_API_KEY")
+MAIL_SENDER = os.getenv("MAIL_SENDER", "mugilwork27@gmail.com")
 
 
 @notification_bp.route('/api/notify_goal_exceeded', methods=['POST'])
