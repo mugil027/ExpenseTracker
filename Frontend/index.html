@@ -605,9 +605,9 @@
 
             if (res.ok) {
               console.log(`✅ Goal exceeded email sent to: ${userEmail}`);
-              setPopupMessage(`📧 Notification sent to ${userEmail}`);
+              setPopupMessage(`📧 Notification sent to ${userEmail}. Please check your inbox or spam folder.`);
               setShowPopup(true);
-              setTimeout(() => setShowPopup(false), 5000); // hide after 4s
+              setTimeout(() => setShowPopup(false), 5000); // hide after 5s
             } else {
               console.error("❌ Failed to send goal email", await res.text());
             }
